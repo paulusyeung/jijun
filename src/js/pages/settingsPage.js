@@ -1,4 +1,4 @@
-import { showToast } from '../utils.js';
+import { showToast, nativeShare, nativeFilePicker, nativeSaveFile, setHapticEnabled } from '../utils.js';
 import { DARK_THEME_ID } from '../themeManager.js';
 
 export class SettingsPage {
@@ -38,6 +38,24 @@ export class SettingsPage {
                             </div>
                             <label class="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" id="dark-mode-toggle" class="sr-only peer">
+                                <div class="w-11 h-6 bg-wabi-bg border border-wabi-border rounded-full peer peer-focus:ring-4 peer-focus:ring-wabi-accent/30 peer-checked:bg-wabi-primary peer-checked:border-wabi-primary transition-colors"></div>
+                                <span class="absolute left-1 top-1 w-4 h-4 bg-wabi-surface rounded-full transition-transform peer-checked:translate-x-full"></span>
+                            </label>
+                        </div>
+                        
+                        <!-- 按鍵震動回饋 -->
+                        <div class="w-full flex items-center gap-4 bg-transparent px-4 min-h-14 justify-between border-b border-wabi-border/30">
+                            <div class="flex items-center gap-4">
+                                <div class="text-wabi-primary flex items-center justify-center rounded-lg bg-wabi-primary/10 shrink-0 size-10">
+                                    <i class="fa-solid fa-mobile-button"></i>
+                                </div>
+                                <div>
+                                    <p class="text-wabi-text-primary text-base font-normal">按鍵震動回饋</p>
+                                    <p class="text-xs text-wabi-text-secondary">輸入數字時觸發震動</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="haptic-toggle" class="sr-only peer">
                                 <div class="w-11 h-6 bg-wabi-bg border border-wabi-border rounded-full peer peer-focus:ring-4 peer-focus:ring-wabi-accent/30 peer-checked:bg-wabi-primary peer-checked:border-wabi-primary transition-colors"></div>
                                 <span class="absolute left-1 top-1 w-4 h-4 bg-wabi-surface rounded-full transition-transform peer-checked:translate-x-full"></span>
                             </label>
@@ -292,15 +310,26 @@ export class SettingsPage {
 
     async setupSettingsPageListeners() {
         document.getElementById('export-data-btn').addEventListener('click', async () => {
-            // Show export options dialog
             await this.showExportOptionsModal();
         });
 
-        const importFileInput = document.getElementById('import-file-input');
-        document.getElementById('import-data-btn').addEventListener('click', () => {
-            importFileInput.click();
+        document.getElementById('import-data-btn').addEventListener('click', async () => {
+            const file = await nativeFilePicker({ accept: '.json' });
+            if (!file) return;
+
+            this.showConfirmModal('匯入資料將會覆蓋所有現有紀錄，確定要繼續嗎？', async () => {
+                try {
+                    await this.app.dataService.importData(file);
+                    showToast('資料已成功匯入！正在重整...', 'success');
+                    setTimeout(() => window.location.reload(), 2000);
+                } catch (error) {
+                    console.error('匯入失敗:', error);
+                    showToast('資料匯入失敗', 'error');
+                }
+            });
         });
 
+        const importFileInput = document.getElementById('import-file-input');
         importFileInput.addEventListener('change', async (event) => {
             const file = event.target.files[0];
             if (!file) return;
@@ -342,17 +371,11 @@ export class SettingsPage {
         const shareBtn = document.getElementById('share-app-btn');
         if (shareBtn) {
             shareBtn.addEventListener('click', () => {
-                if (navigator.share) {
-                    navigator.share({
-                        title: '輕鬆記帳',
-                        text: '快來試試這款簡單好用的記帳 App！',
-                        url: window.location.origin,
-                    })
-                    .then(() => console.log('Successful share'))
-                    .catch((error) => console.log('Error sharing', error));
-                } else {
-                    showToast('您的瀏覽器不支援分享功能', 'warning');
-                }
+                nativeShare({
+                    title: '輕鬆記帳',
+                    text: '快來試試這款簡單好用的記帳 App！',
+                    url: window.location.origin,
+                });
             });
         }
 
@@ -398,6 +421,23 @@ export class SettingsPage {
                     await this.app.themeManager.clearTheme();
                     showToast('已切換為亮色模式', 'success');
                 }
+            });
+        }
+
+        // 按鍵震動回饋切換
+        const hapticToggle = document.getElementById('haptic-toggle');
+        if (hapticToggle) {
+            this.app.dataService.getSetting('enableHapticFeedback').then(setting => {
+                const isEnabled = setting?.value !== false;
+                hapticToggle.checked = isEnabled;
+                setHapticEnabled(isEnabled);
+            });
+
+            hapticToggle.addEventListener('change', async (e) => {
+                const isEnabled = e.target.checked;
+                await this.app.dataService.saveSetting({ key: 'enableHapticFeedback', value: isEnabled });
+                setHapticEnabled(isEnabled);
+                showToast(`按鍵震動回饋已${isEnabled ? '啟用' : '停用'}`);
             });
         }
 
@@ -644,7 +684,12 @@ export class SettingsPage {
             };
 
             try {
-                await this.app.dataService.exportData(options);
+                const exportData = await this.app.dataService.exportData(options);
+                if (exportData) {
+                    const content = typeof exportData === 'string' ? exportData : JSON.stringify(exportData, null, 2);
+                    const fileName = `記帳資料_${new Date().toISOString().split('T')[0]}.json`;
+                    await nativeSaveFile(fileName, content);
+                }
                 showToast('資料已成功匯出！', 'success');
                 closeModal();
             } catch (error) {

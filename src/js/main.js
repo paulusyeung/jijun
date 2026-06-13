@@ -102,6 +102,9 @@ class EasyAccountingApp {
         // Initialize plugins
         await this.pluginManager.init();
 
+        // Check in-app review prompt
+        this.checkReviewPrompt();
+
         // Connect DataService hooks to PluginManager & NotificationService
         this.dataService.setHookProvider(async (hookName, payload) => {
              if (hookName === 'afterAddRecord') {
@@ -280,6 +283,86 @@ class EasyAccountingApp {
                 console.error(`處理攤提「${item.name || '(無名稱)'}」失敗，跳過並繼續:`, error);
             }
         }
+    }
+
+    // ==================== App Review Prompt ====================
+    async checkReviewPrompt() {
+        try {
+            const isNative = typeof window !== 'undefined'
+                && window.Capacitor?.isNativePlatform?.() === true;
+            if (!isNative) return;
+
+            const records = await this.dataService.getRecords({ allLedgers: true });
+            if (records.length < 30) return;
+
+            const appVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '2.1.5.6';
+            const majorVersion = appVersion.split('.').slice(0, 2).join('.');
+
+            const [lastPromptSetting, lastPromptDateSetting] = await Promise.all([
+                this.dataService.getSetting('lastReviewPromptVersion'),
+                this.dataService.getSetting('lastReviewPromptDate'),
+            ]);
+
+            if (lastPromptSetting?.value === majorVersion) return;
+
+            const now = Date.now();
+            const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
+            if (lastPromptDateSetting?.value) {
+                const daysSinceInstall = now - new Date(lastPromptDateSetting.value).getTime();
+                if (daysSinceInstall < sevenDaysMs) return;
+            } else {
+                await this.dataService.saveSetting({ key: 'lastReviewPromptDate', value: new Date().toISOString() });
+                return;
+            }
+
+            await this.dataService.saveSetting({ key: 'lastReviewPromptVersion', value: majorVersion });
+            await this.dataService.saveSetting({ key: 'recordCountAtLastPrompt', value: records.length });
+
+            // 顯示自定義評分提示
+            this._showReviewPrompt();
+        } catch (e) {
+            console.warn('Review prompt check failed:', e);
+        }
+    }
+
+    _showReviewPrompt() {
+        const existing = document.getElementById('app-review-prompt');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'app-review-prompt';
+        modal.className = 'fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-wabi-surface rounded-2xl max-w-sm w-full p-6 shadow-2xl text-center">
+                <div class="size-14 mx-auto mb-4 rounded-full bg-wabi-accent/20 flex items-center justify-center">
+                    <i class="fa-solid fa-star text-3xl text-wabi-accent"></i>
+                </div>
+                <h3 class="text-xl font-bold text-wabi-text-primary mb-2">喜歡輕鬆記帳嗎？</h3>
+                <p class="text-wabi-text-secondary text-sm mb-6">
+                    如果您覺得這個 App 好用，請在 Google Play 上給我們評分，這對我們是很大的鼓勵！
+                </p>
+                <div class="flex gap-3">
+                    <button id="review-later-btn" class="flex-1 py-2.5 border border-wabi-border rounded-lg text-wabi-text-secondary font-medium hover:bg-wabi-bg transition-colors">
+                        稍後再說
+                    </button>
+                    <button id="review-now-btn" class="flex-1 py-2.5 bg-wabi-primary text-white rounded-lg font-medium hover:bg-wabi-primary/90 transition-colors">
+                        前往評分
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('#review-later-btn').addEventListener('click', () => modal.remove());
+        modal.querySelector('#review-now-btn').addEventListener('click', () => {
+            const playStoreUrl = `https://play.google.com/store/apps/details?id=com.walkingfish.easyaccounting`;
+            if (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.() === true) {
+                window.open(playStoreUrl, '_system');
+            } else {
+                window.open(playStoreUrl, '_blank');
+            }
+            modal.remove();
+        });
     }
 
     async registerServiceWorker() {

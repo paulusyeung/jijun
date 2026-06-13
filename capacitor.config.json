@@ -10,6 +10,12 @@
       "scopes": ["profile", "email", "https://www.googleapis.com/auth/drive.appdata"],
       "serverClientId": "350965300840-7eutjcl4jq930h5fjvoja4ho77q30cpp.apps.googleusercontent.com",
       "forceCodeForRefreshToken": true
+    },
+    "SplashScreen": {
+      "launchShowDuration": 1500,
+      "backgroundColor": "#F5F5F3",
+      "androidScaleType": "CENTER_CROP",
+      "showSpinner": false
     }
   }
 }

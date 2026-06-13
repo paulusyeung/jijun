@@ -30,3 +30,5 @@ android/capacitor-cordova-android-plugins/build/
 *.apk
 *.aab
 *.keystore
+# Keystore properties
+android/keystore.properties

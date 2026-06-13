@@ -1,4 +1,4 @@
-import { debounce } from './utils.js';
+import { debounce, setStatusBarStyle } from './utils.js';
 
 // 內建深色主題 ID（不可刪除、自動更新）
 export const DARK_THEME_ID = 'com.walkingfish.theme.dark';
@@ -67,6 +67,7 @@ export class ThemeManager {
 
         // Apply CSS Variables
         let cssText = ':root {\n';
+        let isDark = false;
         if (theme && theme.colors) {
             for (const [key, value] of Object.entries(theme.colors)) {
                 // key is like "wabi-bg", we want "--theme-bg"
@@ -80,9 +81,21 @@ export class ThemeManager {
                     cssText += `  --theme-${cssVarName}: ${value};\n`;
                 }
             }
+            // Detect if this is a dark theme by checking background luminance
+            if (theme.colors['wabi-bg']) {
+                const bg = theme.colors['wabi-bg'].replace('#', '');
+                const r = parseInt(bg.substring(0, 2), 16);
+                const g = parseInt(bg.substring(2, 4), 16);
+                const b = parseInt(bg.substring(4, 6), 16);
+                const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+                isDark = luminance < 0.5;
+            }
         }
         cssText += '}\n';
         this.styleElement.textContent = cssText;
+
+        // Update status bar style for native
+        setStatusBarStyle(isDark);
 
         // Save active theme ID
         await this.dataService.saveSetting({ key: 'activeThemeId', value: theme ? theme.id : null });

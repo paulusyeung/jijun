@@ -409,6 +409,162 @@ export function shouldSkipDate(date, skipRules) {
   return false; // If no rules matched, do not skip
 }
 
+// ── 原生平台偵測 ──────────────────────────────────────
+const _isNative = typeof window !== 'undefined'
+    && window.Capacitor?.isNativePlatform?.() === true;
+
+// ── Haptic Feedback ──────────────────────────────────
+let _hapticEnabled = true;
+let _hapticLastCall = 0;
+
+/**
+ * 設定 haptic feedback 啟用狀態
+ * @param {boolean} enabled
+ */
+export function setHapticEnabled(enabled) {
+    _hapticEnabled = enabled;
+}
+
+/**
+ * 觸發震動回饋（debound 50ms），僅原生平台有效
+ */
+export function triggerHaptic() {
+    if (!_isNative || !_hapticEnabled) return;
+    const now = Date.now();
+    if (now - _hapticLastCall < 50) return;
+    _hapticLastCall = now;
+    import('@capacitor/haptics').then(({ Haptics }) => {
+        Haptics.vibrate({ duration: 20 });
+    }).catch(() => {});
+}
+
+// ── Native Share Sheet ───────────────────────────────
+
+/**
+ * 使用原生分享面板分享內容
+ * @param {object} options - { title, text, url }
+ */
+export async function nativeShare(options) {
+    if (_isNative) {
+        try {
+            const { Share } = await import('@capacitor/share');
+            await Share.share(options);
+            return true;
+        } catch (e) {
+            console.warn('Native share failed:', e);
+            return false;
+        }
+    }
+    if (navigator.share) {
+        try {
+            await navigator.share(options);
+            return true;
+        } catch (e) {
+            if (e.name !== 'AbortError') {
+                console.warn('Web share failed:', e);
+            }
+            return false;
+        }
+    }
+    if (options.url) {
+        try {
+            await navigator.clipboard.writeText(options.url);
+            showToast('已複製連結至剪貼簿', 'success');
+            return true;
+        } catch (e) {
+            console.warn('Clipboard failed:', e);
+        }
+    }
+    return false;
+}
+
+// ── Native File Picker ───────────────────────────────
+
+/**
+ * 使用原生檔案選擇器選取檔案
+ * @param {object} options - { accept: string }
+ * @returns {Promise<File|null>}
+ */
+export async function nativeFilePicker(options = { accept: '.json,.csv' }) {
+    if (_isNative) {
+        try {
+            const { Filesystem } = await import('@capacitor/filesystem');
+            const result = await Filesystem.pickFile(options);
+            if (result && result.path) {
+                const response = await fetch(result.path);
+                const blob = await response.blob();
+                return new File([blob], result.name || 'imported_file', { type: blob.type });
+            }
+            return null;
+        } catch (e) {
+            console.warn('Native file picker failed:', e);
+        }
+    }
+    return new Promise((resolve) => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = options.accept || '.json,.csv';
+        input.onchange = () => {
+            resolve(input.files?.[0] || null);
+        };
+        input.click();
+    });
+}
+
+/**
+ * 使用原生儲存檔案功能
+ * @param {string} fileName
+ * @param {string} content
+ * @param {string} mimeType
+ */
+export async function nativeSaveFile(fileName, content, mimeType = 'application/json') {
+    if (_isNative) {
+        try {
+            const { Filesystem, Directory } = await import('@capacitor/filesystem');
+            const result = await Filesystem.writeFile({
+                path: `Download/${fileName}`,
+                data: content,
+                directory: Directory.External,
+            });
+            showToast(`已儲存至「下載」資料夾: ${fileName}`, 'success');
+            return result;
+        } catch (e) {
+            console.warn('Native save failed:', e);
+        }
+    }
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+// ── Status Bar ───────────────────────────────────────
+
+/**
+ * 設定狀態列樣式
+ * @param {boolean} isDark - 是否為深色/暗色主題
+ */
+export async function setStatusBarStyle(isDark) {
+    if (!_isNative) return;
+    try {
+        const { StatusBar, Style } = await import('@capacitor/status-bar');
+        if (isDark) {
+            await StatusBar.setStyle({ style: Style.Dark });
+            await StatusBar.setBackgroundColor({ color: '#1a1a1a' });
+        } else {
+            await StatusBar.setStyle({ style: Style.Light });
+            await StatusBar.setBackgroundColor({ color: '#F5F5F3' });
+        }
+    } catch (e) {
+        console.warn('StatusBar style failed:', e);
+    }
+}
+
 /**
  * 計算攤提/分期/折舊的每期金額與理論總額
  * @param {number} principal - 本金 (總額 - 首付)

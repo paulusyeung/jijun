@@ -7,7 +7,9 @@ body {
     font-family: 'Inter', 'Noto Sans TC', sans-serif;
     padding-top: env(safe-area-inset-top, 0px); /* 避開系統狀態列 */
     padding-bottom: 80px; /* Space for bottom navigation */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
     background-color: #F5F5F3; /* wabi-bg */
+    overscroll-behavior: none; /* 停用 Android WebView 藍色 overscroll 發光效果 */
 }
 
 @media (min-width: 768px) {

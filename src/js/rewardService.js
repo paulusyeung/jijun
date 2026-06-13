@@ -153,8 +153,9 @@ export class RewardService {
             this._admobInitialized = true;
             console.log('AdMob SDK 初始化成功');
         } catch (e) {
-            console.error('AdMob SDK 初始化失敗:', e);
+            console.error('AdMob SDK 初始化失敗（應用將正常運作，不顯示廣告）:', e);
             this._admobInitialized = false;
+            this._admobModule = null;
         }
     }
 

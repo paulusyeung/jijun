@@ -1,4 +1,4 @@
-import { formatDate, formatDateToString, formatCurrency, showToast, escapeHTML, calculateAmortizationDetails, customConfirm } from '../utils.js';
+import { formatDate, formatDateToString, formatCurrency, showToast, escapeHTML, calculateAmortizationDetails, customConfirm, triggerHaptic } from '../utils.js';
 
 export class AddPage {
     constructor(app) {
@@ -584,13 +584,17 @@ export class AddPage {
 
         const handleKeypad = async (key) => {
             if (key >= '0' && key <= '9' || key === '00') {
+                triggerHaptic();
                 if (currentAmount === '0') currentAmount = '';
                 if (currentAmount.replace('.', '').length < 9) currentAmount += key;
             } else if (key === '.') {
+                triggerHaptic();
                 if (!currentAmount.includes('.')) currentAmount += '.';
             } else if (key === 'backspace') {
+                triggerHaptic();
                 currentAmount = currentAmount.slice(0, -1) || '0';
             } else if (key === 'ac') {
+                triggerHaptic();
                 currentAmount = '0';
             } else if (key === 'done') {
                 toggleKeypadGrid(false);

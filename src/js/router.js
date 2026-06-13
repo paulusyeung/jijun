@@ -1,4 +1,4 @@
-import { showToast } from './utils.js';
+import { showToast, triggerHaptic } from './utils.js';
 
 export class Router {
     constructor(app) {
@@ -24,7 +24,7 @@ export class Router {
 
     async handleRouteChange() {
         const hash = window.location.hash || '#home';
-        // Allow re-rendering same hash if needed? No, main.js prevented it.
+        triggerHaptic();
         if (hash === this.currentHash) return;
         this.currentHash = hash;
 
