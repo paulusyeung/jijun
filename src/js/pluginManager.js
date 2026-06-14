@@ -2,17 +2,162 @@ import { showToast } from './utils.js';
 import Chart from 'chart.js/auto';
 import { PluginStorage } from './pluginStorage.js';
 
+/**
+ * 在 iframe 內執行的啟動腳本（透過 srcdoc 注入）
+ * 建立基於 postMessage 的 context Proxy，讓插件享有與舊版相同的 API 表面
+ */
+const IFRAME_BOOTSTRAP = `
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head><body>
+<script type="module">
+const _pending = new Map();
+const _callbacks = {};
+let _cbCounter = 1;
+
+function call(channelId, ns, method, args) {
+  const callId = crypto.randomUUID();
+  return new Promise((resolve, reject) => {
+    _pending.set(callId, { resolve, reject });
+    window.parent.postMessage(
+      { type: 'pm_api_call', channelId, callId, ns, method, args },
+      '*'
+    );
+  });
+}
+
+window.addEventListener('message', (e) => {
+  const d = e.data || {};
+  if (d.callId && _pending.has(d.callId)) {
+    const p = _pending.get(d.callId);
+    _pending.delete(d.callId);
+    if (d.error) p.reject(new Error(d.error));
+    else p.resolve(d.result);
+  }
+  if (d.type === 'pm_render_call') {
+    const fn = _callbacks[d.callbackId];
+    if (fn) {
+      Promise.resolve(fn(...d.args)).then(
+        (result) => e.source.postMessage({ type: 'pm_render_result', channelId: d.channelId, callbackId: d.callbackId, result }, '*'),
+        (err) => e.source.postMessage({ type: 'pm_render_result', channelId: d.channelId, callbackId: d.callbackId, error: err.message }, '*')
+      );
+    }
+  }
+});
+
+function createContext(channelId) {
+  return {
+    appName: 'Easy Accounting',
+    version: '',
+    activeLedgerId: () => call(channelId, 'meta', 'activeLedgerId', []),
+    lib: {},
+    storage: {
+      getItem:   (k) => call(channelId, 'storage', 'getItem', [k]),
+      setItem:   (k,v) => call(channelId, 'storage', 'setItem', [k,v]),
+      removeItem:(k) => call(channelId, 'storage', 'removeItem', [k]),
+      clear:     () => call(channelId, 'storage', 'clear', []),
+      getJSON:   (k) => call(channelId, 'storage', 'getJSON', [k]),
+      setJSON:   (k,v) => call(channelId, 'storage', 'setJSON', [k,v]),
+    },
+    data: {
+      getRecords:    () => call(channelId, 'data', 'getRecords', []),
+      getDebts:      () => call(channelId, 'data', 'getDebts', []),
+      getContacts:   () => call(channelId, 'data', 'getContacts', []),
+      getAccounts:   () => call(channelId, 'data', 'getAccounts', []),
+      getCategories: (t) => call(channelId, 'data', 'getCategories', [t]),
+      getCategory:   (t,i) => call(channelId, 'data', 'getCategory', [t,i]),
+      addRecord:     (r) => call(channelId, 'data', 'addRecord', [r]),
+      addDebt:       (d) => call(channelId, 'data', 'addDebt', [d]),
+      addContact:    (c) => call(channelId, 'data', 'addContact', [c]),
+    },
+    ui: {
+      showToast:  (m,t) => call(channelId, 'ui', 'showToast', [m,t]),
+      showConfirm:(t,m) => call(channelId, 'ui', 'showConfirm', [t,m]),
+      showAlert:  (t,m) => call(channelId, 'ui', 'showAlert', [t,m]),
+      navigateTo: (h) => call(channelId, 'ui', 'navigateTo', [h]),
+      openAddPage:(d) => call(channelId, 'ui', 'openAddPage', [d]),
+      registerPage: (routeId, title, renderFn) => {
+        const cbId = 'cb_' + (_cbCounter++);
+        _callbacks[cbId] = renderFn;
+        return call(channelId, 'ui', 'registerPage', [routeId, title, cbId]);
+      },
+      registerHomeWidget: (id, renderFn) => {
+        const cbId = 'cb_' + (_cbCounter++);
+        _callbacks[cbId] = renderFn;
+        return call(channelId, 'ui', 'registerHomeWidget', [id, cbId]);
+      },
+    },
+    events: {
+      on: (hookName, callback) => {
+        const cbId = 'cb_' + (_cbCounter++);
+        _callbacks[cbId] = callback;
+        return call(channelId, 'events', 'on', [hookName, cbId]);
+      },
+      off: (hookName) => call(channelId, 'events', 'off', [hookName]),
+    },
+    hooks: {},
+  };
+}
+
+window.addEventListener('message', async (e) => {
+  if (e.data && e.data.type === 'pm_init') {
+    const { channelId, pluginCode, version, lib } = e.data;
+    try {
+      const b64 = btoa(unescape(encodeURIComponent(pluginCode)));
+      const url = 'data:text/javascript;base64,' + b64;
+      const mod = await import(url);
+      const ctx = createContext(channelId);
+      ctx.version = version || '';
+      ctx.lib = lib || {};
+      if (mod.default && typeof mod.default.init === 'function') {
+        mod.default.init(ctx);
+        e.source.postMessage({ type: 'pm_ready', channelId }, '*');
+      } else {
+        e.source.postMessage({ type: 'pm_error', channelId, error: 'Plugin has no init function' }, '*');
+      }
+    } catch (err) {
+      e.source.postMessage({ type: 'pm_error', channelId, error: err.message }, '*');
+    }
+  }
+});
+</script>
+</body></html>
+`;
+
 export class PluginManager {
   constructor(dataService, app) {
     this.dataService = dataService;
     this.app = app;
-    this.plugins = new Map(); // id -> pluginModule
-    this.customPages = new Map(); // routeId -> { title, renderFn }
-    this.homeWidgets = new Map(); // id -> renderFn
-    this.widgetOrder = []; 
+    this.plugins = new Map();
+    this.customPages = new Map();
+    this.homeWidgets = new Map();
+    this.widgetOrder = [];
     this.hiddenWidgets = [];
-    this.hooks = new Map(); // hookName -> Set<callback>
+    this.hooks = new Map();
+
+    // V2 iframe sandbox state
+    this.sandboxV2Enabled = false;
+    this._iframeChannels = new Map(); // channelId -> { iframe, pluginId, callbacks, pendingCalls }
+    this._nextCallbackId = 1;
+
+    // Parent-side message handler for iframe channels
+    this._iframeMessageHandler = this._handleIframeMessage.bind(this);
   }
+
+  async init() {
+    const savedOrder = await this.dataService.getSetting('widgetOrder');
+    this.widgetOrder = savedOrder ? savedOrder.value : [];
+    const savedHidden = await this.dataService.getSetting('hiddenWidgets');
+    this.hiddenWidgets = savedHidden ? savedHidden.value : [];
+
+    // 10.1 載入沙盒 V2 功能開關
+    const flagSetting = await this.dataService.getSetting('pluginSandboxV2');
+    this.sandboxV2Enabled = flagSetting?.value === true;
+
+    await this.loadInstalledPlugins();
+  }
+
+  /** 啟用 V2 沙盒模式 */
+  isSandboxV2Enabled() { return this.sandboxV2Enabled; }
 
   // ==================== 安全工具 ====================
 
@@ -25,7 +170,7 @@ export class PluginManager {
 
   // ==================== 權限強制工具 ====================
 
-  /** 建立拒絕存取的 Proxy 替身 */
+  /** 建立拒絕存取的 Proxy 替身（僅用於舊版沙盒） */
   _denied(group, permNeeded) {
     const label = PluginManager.PERMISSION_LABELS[permNeeded]?.label || permNeeded;
     return new Proxy({}, {
@@ -35,15 +180,14 @@ export class PluginManager {
     });
   }
 
+  /** 建立舊版插件 context（僅用於舊版沙盒） */
   createPluginContext(pluginId, permissions = [], initializedStorage = null) {
     const has = (perm) => permissions.includes(perm);
 
-    // ---- storage ----
     const storage = has('storage') && pluginId && initializedStorage
       ? initializedStorage
       : this._denied('storage', 'storage');
 
-    // ---- data ----
     const dataRead = has('data:read') ? {
       getRecords: () => this.dataService.getRecords(),
       getDebts: () => this.dataService.getDebts(),
@@ -59,12 +203,10 @@ export class PluginManager {
       addContact: (contact) => this.dataService.addContact(contact),
     } : {};
 
-    // 合併讀寫，未授權的方法以 Proxy 攔截
     const dataApi = (has('data:read') || has('data:write'))
       ? { ...dataRead, ...dataWrite }
       : this._denied('data', 'data:read');
 
-    // 如果只有其中一種權限，補上另一種的拒絕訊息
     if (has('data:read') && !has('data:write')) {
       const writeDenied = this._denied('data', 'data:write');
       dataApi.addRecord = writeDenied.addRecord;
@@ -81,7 +223,6 @@ export class PluginManager {
       dataApi.getCategory = readDenied.getCategory;
     }
 
-    // ---- ui ----
     const uiApi = has('ui') ? {
       showToast: (msg, type) => showToast(msg, type),
       registerPage: (routeId, title, renderFn) => this.registerPage(routeId, title, renderFn),
@@ -95,7 +236,6 @@ export class PluginManager {
       showAlert: (title, message) => this.showAlertModal(title, message)
     } : this._denied('ui', 'ui');
 
-    // ---- events（始終允許，為基礎能力）----
     const eventsApi = {
       on: (hookName, callback) => this.registerHook(hookName, callback),
       off: (hookName, callback) => this.unregisterHook(hookName, callback)
@@ -112,14 +252,6 @@ export class PluginManager {
       events: eventsApi,
       hooks: {}
     };
-  }
-
-  async init() {
-    const savedOrder = await this.dataService.getSetting('widgetOrder');
-    this.widgetOrder = savedOrder ? savedOrder.value : [];
-    const savedHidden = await this.dataService.getSetting('hiddenWidgets');
-    this.hiddenWidgets = savedHidden ? savedHidden.value : [];
-    await this.loadInstalledPlugins();
   }
 
   async loadInstalledPlugins() {
@@ -223,7 +355,24 @@ export class PluginManager {
   }
 
   async loadPlugin(pluginData) {
+    if (this.sandboxV2Enabled) {
+      return this._loadPluginInIframe(pluginData);
+    }
+    return this._loadPluginLegacy(pluginData);
+  }
+
+  /** 舊版沙盒：Proxy + Blob URL */
+  async _loadPluginLegacy(pluginData) {
     try {
+        if (pluginData.scriptHash) {
+            const computedHash = await this._computeSHA256(pluginData.script);
+            if (computedHash !== pluginData.scriptHash) {
+                console.warn(`Plugin ${pluginData.name}: Script hash mismatch (possible tampering). Expected ${pluginData.scriptHash}, got ${computedHash}.`);
+                showToast(`插件「${pluginData.name}」檔案已遭篡改，載入中止`, 'error');
+                return;
+            }
+        }
+
         const perms = pluginData.permissions || [];
         const sandboxedScript = `
           ${this._getSandboxWrapper(perms)}
@@ -244,7 +393,7 @@ export class PluginManager {
             const context = this.createPluginContext(pluginData.id, perms, storage);
             module.default.init(context);
             this.plugins.set(pluginData.id, module.default);
-            console.log(`Plugin loaded: ${pluginData.name}`);
+            console.log(`Plugin loaded (legacy): ${pluginData.name}`);
         } else {
             console.warn(`Plugin ${pluginData.name} has no init function.`);
         }
@@ -254,6 +403,290 @@ export class PluginManager {
         console.error(`Error loading plugin ${pluginData.name}:`, e);
         showToast(`插件 ${pluginData.name} 載入失敗`, 'error');
     }
+  }
+
+  // ==================== V2 iframe 沙盒 ====================
+
+  /**
+   * 10.2 在 sandboxed iframe 中載入插件
+   * 10.7 若 iframe 建立失敗則退回舊版沙盒
+   */
+  async _loadPluginInIframe(pluginData) {
+    let channelId = null;
+    try {
+        if (pluginData.scriptHash) {
+            const computedHash = await this._computeSHA256(pluginData.script);
+            if (computedHash !== pluginData.scriptHash) {
+                console.warn(`Plugin ${pluginData.name}: Script hash mismatch (possible tampering). Expected ${pluginData.scriptHash}, got ${computedHash}.`);
+                showToast(`插件「${pluginData.name}」檔案已遭篡改，載入中止`, 'error');
+                return;
+            }
+        }
+
+        channelId = crypto.randomUUID();
+        const iframe = document.createElement('iframe');
+
+        iframe.setAttribute('sandbox', 'allow-scripts');
+        iframe.style.display = 'none';
+        iframe.srcdoc = IFRAME_BOOTSTRAP;
+
+        // 註冊 channel（10.4：使用 channelId 驗證，而非 event.origin）
+        const channelEntry = {
+            iframe,
+            pluginId: pluginData.id,
+            pluginName: pluginData.name,
+            permissions: pluginData.permissions || [],
+            pendingCalls: new Map(),
+            callbacks: new Map(), // callbackId -> function
+            ready: false,
+        };
+        this._iframeChannels.set(channelId, channelEntry);
+
+        // 如果已註冊，先移除舊的 listener
+        window.removeEventListener('message', this._iframeMessageHandler);
+        window.addEventListener('message', this._iframeMessageHandler);
+
+        document.body.appendChild(iframe);
+
+        // 等待 iframe 載入完成後發送初始化訊息
+        await new Promise((resolve) => {
+            iframe.onload = () => {
+                const targetOrigin = '*'; // sandboxed iframe 的 origin 為 null
+                iframe.contentWindow.postMessage({
+                    type: 'pm_init',
+                    channelId,
+                    pluginCode: pluginData.script,
+                    version: __APP_VERSION__,
+                    lib: { /* Chart 無法序列化，留空由插件自行 import */ },
+                }, targetOrigin);
+                resolve();
+            };
+            // 若 iframe 已載入，onload 可能不會觸發
+            if (iframe.contentWindow && iframe.contentWindow.document.readyState === 'complete') {
+                iframe.onload();
+            }
+        });
+
+        // 等待插件回覆 ready 或 error
+        const result = await Promise.race([
+            this._waitForChannelMessage(channelId, 'pm_ready', 10000),
+            this._waitForChannelMessage(channelId, 'pm_error', 10000),
+        ]);
+
+        if (result.type === 'pm_error') {
+            throw new Error(`Plugin iframe init error: ${result.error}`);
+        }
+
+        channelEntry.ready = true;
+        this.plugins.set(pluginData.id, { _iframeChannel: channelId });
+        console.log(`Plugin loaded (iframe V2): ${pluginData.name}`);
+
+    } catch (e) {
+        console.error(`Error loading plugin ${pluginData.name} in iframe:`, e);
+        showToast(`插件 ${pluginData.name} iframe 載入失敗，使用舊版沙盒`, 'error');
+
+        // 10.7 退回舊版沙盒
+        if (this._iframeChannels.has(channelId)) {
+            const entry = this._iframeChannels.get(channelId);
+            if (entry.iframe && entry.iframe.parentNode) {
+                entry.iframe.parentNode.removeChild(entry.iframe);
+            }
+            this._iframeChannels.delete(channelId);
+        }
+
+        return this._loadPluginLegacy(pluginData);
+    }
+  }
+
+  /**
+   * 等待來自 iframe 的特定類型訊息
+   */
+  _waitForChannelMessage(channelId, type, timeout = 10000) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`Timeout waiting for ${type}`)), timeout);
+        const handler = (e) => {
+            const data = e.data || {};
+            if (data.channelId === channelId && data.type === type) {
+                clearTimeout(timer);
+                window.removeEventListener('message', handler);
+                resolve(data);
+            }
+        };
+        window.addEventListener('message', handler);
+    });
+  }
+
+  /**
+   * 10.3 + 10.4 處理 iframe 的 API 呼叫與渲染回呼
+   * 驗證 channelId 後分派到對應的實際實作
+   */
+  async _handleIframeMessage(event) {
+    const data = event.data || {};
+    const { channelId, callId, type } = data;
+
+    if (!channelId || !this._iframeChannels.has(channelId)) return;
+
+    const channel = this._iframeChannels.get(channelId);
+    const perms = channel.permissions;
+    const has = (perm) => perms.includes(perm);
+    const iframe = channel.iframe;
+    const targetWindow = iframe && iframe.contentWindow;
+
+    const sendResponse = (result) => {
+        if (targetWindow) targetWindow.postMessage({ type: 'pm_api_response', channelId, callId, result }, '*');
+    };
+    const sendError = (error) => {
+        if (targetWindow) targetWindow.postMessage({ type: 'pm_api_response', channelId, callId, error: error.message || String(error) }, '*');
+    };
+
+    // ── API 呼叫 ──
+    if (type === 'pm_api_call') {
+        const { ns, method, args = [] } = data;
+        try {
+            let result;
+            switch (ns) {
+                case 'storage': {
+                    if (!has('storage')) throw new Error('Permission Denied: storage');
+                    const storage = new PluginStorage(channel.pluginId, this.dataService);
+                    await storage.init();
+                    if (method === 'getItem') result = storage.getItem(args[0]);
+                    else if (method === 'setItem') { storage.setItem(args[0], args[1]); result = undefined; }
+                    else if (method === 'removeItem') { storage.removeItem(args[0]); result = undefined; }
+                    else if (method === 'clear') { storage.clear(); result = undefined; }
+                    else if (method === 'getJSON') result = storage.getJSON(args[0]);
+                    else if (method === 'setJSON') { storage.setJSON(args[0], args[1]); result = undefined; }
+                    else throw new Error(`Unknown storage method: ${method}`);
+                    break;
+                }
+                case 'data': {
+                    if (method.startsWith('get') && !has('data:read')) throw new Error('Permission Denied: data:read');
+                    if (method.startsWith('add') && !has('data:write')) throw new Error('Permission Denied: data:write');
+                    if (method === 'getRecords') result = await this.dataService.getRecords();
+                    else if (method === 'getDebts') result = await this.dataService.getDebts();
+                    else if (method === 'getContacts') result = await this.dataService.getContacts();
+                    else if (method === 'getAccounts') result = await this.dataService.getAccounts();
+                    else if (method === 'getCategories') result = this.app.categoryManager.getAllCategories(args[0]);
+                    else if (method === 'getCategory') result = this.app.categoryManager.getCategoryById(args[0], args[1]);
+                    else if (method === 'addRecord') { await this.dataService.addRecord(args[0]); result = undefined; }
+                    else if (method === 'addDebt') { await this.dataService.addDebt(args[0]); result = undefined; }
+                    else if (method === 'addContact') { await this.dataService.addContact(args[0]); result = undefined; }
+                    else throw new Error(`Unknown data method: ${method}`);
+                    break;
+                }
+                case 'ui': {
+                    if (!has('ui')) throw new Error('Permission Denied: ui');
+                    if (method === 'showToast') { showToast(args[0], args[1]); result = undefined; }
+                    else if (method === 'showConfirm') result = await this.showConfirmModal(args[0], args[1]);
+                    else if (method === 'showAlert') result = await this.showAlertModal(args[0], args[1]);
+                    else if (method === 'navigateTo') { window.location.hash = args[0]; result = undefined; }
+                    else if (method === 'openAddPage') {
+                        if (args[0]) sessionStorage.setItem('temp_add_data', JSON.stringify(args[0]));
+                        window.location.hash = `#add?t=${Date.now()}`;
+                        result = undefined;
+                    }
+                    else if (method === 'registerPage') {
+                        const [routeId, title, cbId] = args;
+                        this.registerPage(routeId, title, async (container) => {
+                            try {
+                                const res = await this._callIframeCallback(channelId, cbId, [container.outerHTML || '']);
+                                if (res && typeof res === 'string') container.innerHTML = res;
+                            } catch (e) { console.error('Error rendering iframe page:', e); }
+                        });
+                        result = undefined;
+                    }
+                    else if (method === 'registerHomeWidget') {
+                        const [id, cbId] = args;
+                        this.registerHomeWidget(id, async (container) => {
+                            try {
+                                const res = await this._callIframeCallback(channelId, cbId, ['']);
+                                if (res && typeof res === 'string') container.innerHTML = res;
+                            } catch (e) { console.error('Error rendering iframe widget:', e); }
+                        });
+                        result = undefined;
+                    }
+                    else throw new Error(`Unknown ui method: ${method}`);
+                    break;
+                }
+                case 'events': {
+                    if (method === 'on') {
+                        const [hookName, cbId] = args;
+                        this.registerHook(hookName, async (payload) => {
+                            const res = await this._callIframeCallback(channelId, cbId, [payload]);
+                            return res;
+                        });
+                        result = undefined;
+                    } else if (method === 'off') {
+                        this.unregisterHook(args[0], null);
+                        result = undefined;
+                    } else throw new Error(`Unknown events method: ${method}`);
+                    break;
+                }
+                case 'meta': {
+                    if (method === 'activeLedgerId') result = this.dataService.activeLedgerId;
+                    else throw new Error(`Unknown meta method: ${method}`);
+                    break;
+                }
+                default:
+                    throw new Error(`Unknown namespace: ${ns}`);
+            }
+            sendResponse(result);
+        } catch (e) {
+            sendError(e);
+        }
+        return;
+    }
+
+    // ── 渲染結果回呼 ──
+    if (type === 'pm_render_result') {
+        const { callbackId, result, error } = data;
+        const pending = channel.pendingCalls.get(callbackId);
+        if (pending) {
+            channel.pendingCalls.delete(callbackId);
+            if (error) pending.reject(new Error(error));
+            else pending.resolve(result);
+        }
+    }
+  }
+
+  /**
+   * 註冊一個 iframe 中的回呼函數，回傳 callbackId
+   */
+  _registerCallback(channelId, fn) {
+    if (typeof fn !== 'function') return null;
+    const callbackId = `cb_${channelId}_${this._nextCallbackId++}`;
+    const channel = this._iframeChannels.get(channelId);
+    if (channel) {
+        channel.callbacks.set(callbackId, fn);
+    }
+    return callbackId;
+  }
+
+  /**
+   * 呼叫 iframe 中的回呼函數（透過 postMessage）
+   */
+  async _callIframeCallback(channelId, callbackId, args) {
+    const channel = this._iframeChannels.get(channelId);
+    if (!channel || !channel.iframe || !channel.iframe.contentWindow) {
+        throw new Error('Channel or iframe not available');
+    }
+    return new Promise((resolve, reject) => {
+        const callId = callbackId + '_' + Date.now();
+        channel.pendingCalls.set(callId, { resolve, reject });
+        channel.iframe.contentWindow.postMessage({
+            type: 'pm_render_call',
+            channelId,
+            callbackId,
+            callId,
+            args,
+        }, '*');
+        // 5秒超時
+        setTimeout(() => {
+            if (channel.pendingCalls.has(callId)) {
+                channel.pendingCalls.delete(callId);
+                reject(new Error('Callback timeout'));
+            }
+        }, 5000);
+    });
   }
 
   // ==================== 權限同意 ====================
@@ -335,6 +768,18 @@ export class PluginManager {
         reader.onload = async (e) => {
             const scriptContent = e.target.result;
             
+            // 如果從商店安裝且有提供 sha256 hash，驗證完整性
+            if (storePluginInfo?.sha256) {
+                const computedHash = await this._computeSHA256(scriptContent);
+                if (computedHash !== storePluginInfo.sha256) {
+                    reject(new Error('插件檔案完整性驗證失敗：SHA-256 hash 不符'));
+                    return;
+                }
+            }
+
+            // 計算 SHA-256 hash 並儲存（供後續載入時驗證）
+            const scriptHash = await this._computeSHA256(scriptContent);
+            
             // 驗證時也套用沙盒（驗證階段全面封鎖網路）
              const sandboxedValidation = `
                ${this._getSandboxWrapper([])}
@@ -401,6 +846,7 @@ export class PluginManager {
                 description: meta.description || '',
                 permissions: permissions,
                 script: scriptContent,
+                scriptHash: scriptHash,  // SHA-256 hash for tamper detection
                 enabled: existingPlugin ? existingPlugin.enabled : true,
                 installedAt: existingPlugin ? existingPlugin.installedAt : Date.now(),
                 ...(existingPlugin && existingPlugin.storage ? { storage: existingPlugin.storage } : {})
@@ -416,6 +862,17 @@ export class PluginManager {
         reader.onerror = () => reject(new Error('讀取失敗'));
         reader.readAsText(file);
     });
+  }
+
+  /**
+   * 計算字串的 SHA-256 hash（十六進位）
+   */
+  async _computeSHA256(str) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(str);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
   }
 
   async uninstallPlugin(id) {

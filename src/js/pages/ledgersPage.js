@@ -1,5 +1,5 @@
 // ==================== 帳本管理頁面 ====================
-import { showToast, escapeHTML, customConfirm } from '../utils.js';
+import { showToast, escapeHTML, escAttr, customConfirm } from '../utils.js';
 import { FONT_AWESOME_ICONS } from '../fontAwesomeIcons.js';
 
 export class LedgersPage {
@@ -157,11 +157,11 @@ export class LedgersPage {
                     <label class="text-sm font-medium text-wabi-text-primary block mb-2">主題色</label>
                     <div id="color-picker" class="flex flex-wrap gap-2">
                         ${colors.map(c => `
-                            <button class="color-option size-8 rounded-full border-2 transition-all ${c === selectedColor ? 'border-wabi-primary scale-110 ring-2 ring-wabi-primary/30' : 'border-transparent hover:scale-110'}" data-color="${c}" style="background-color: ${c}"></button>
+                            <button class="color-option size-8 rounded-full border-2 transition-all ${c === selectedColor ? 'border-wabi-primary scale-110 ring-2 ring-wabi-primary/30' : 'border-transparent hover:scale-110'}" data-color="${escAttr(c)}" style="background-color: ${escAttr(c)}"></button>
                         `).join('')}
                         <button id="custom-color-trigger" class="size-8 rounded-full border-2 border-dashed border-wabi-border flex items-center justify-center hover:border-wabi-primary hover:scale-110 transition-all relative overflow-hidden" title="自訂顏色">
                             <i class="fa-solid fa-palette text-xs text-wabi-text-secondary"></i>
-                            <input type="color" id="custom-color-input" value="${selectedColor}" class="absolute inset-0 opacity-0 cursor-pointer" />
+                            <input type="color" id="custom-color-input" value="${escAttr(selectedColor)}" class="absolute inset-0 opacity-0 cursor-pointer" />
                         </button>
                     </div>
                     <input type="hidden" id="ledger-color-input" value="${selectedColor}" />
@@ -180,8 +180,8 @@ export class LedgersPage {
                         ${defaultIcons.map(ic => `
                             <button class="icon-option size-10 rounded-lg flex items-center justify-center text-lg transition-all
                                 ${ic === selectedIcon ? 'bg-wabi-primary text-wabi-surface shadow-sm' : 'bg-wabi-bg text-wabi-text-secondary hover:bg-wabi-bg'}"
-                                data-icon="${ic}">
-                                <i class="${ic}"></i>
+                                data-icon="${escAttr(ic)}">
+                                <i class="${escAttr(ic)}"></i>
                             </button>
                         `).join('')}
                     </div>
@@ -191,15 +191,15 @@ export class LedgersPage {
                             placeholder="自訂圖示 class（如 fa-solid fa-rocket）" />
                         <button id="apply-custom-icon-btn" class="px-3 py-1.5 bg-wabi-primary/10 text-wabi-primary rounded-lg text-xs font-medium hover:bg-wabi-primary/20 transition-colors shrink-0">套用</button>
                     </div>
-                    <input type="hidden" id="ledger-icon-input" value="${selectedIcon}" />
+                    <input type="hidden" id="ledger-icon-input" value="${escAttr(selectedIcon)}" />
                 </div>
 
                 <!-- Preview -->
                 <div class="mb-6 p-3 bg-wabi-bg rounded-lg">
                     <p class="text-xs text-wabi-text-secondary mb-2">預覽</p>
                     <div class="flex items-center gap-3">
-                        <div id="preview-icon" class="flex items-center justify-center rounded-xl text-white shrink-0 size-12" style="background-color: ${selectedColor}">
-                            <i class="${selectedIcon} text-2xl"></i>
+                        <div id="preview-icon" class="flex items-center justify-center rounded-xl text-white shrink-0 size-12" style="background-color: ${escAttr(selectedColor)}">
+                            <i class="${escAttr(selectedIcon)} text-2xl"></i>
                         </div>
                         <p id="preview-name" class="font-bold text-wabi-text-primary">${isEdit ? escapeHTML(ledger.name) : '新帳本'}</p>
                     </div>
@@ -232,7 +232,7 @@ export class LedgersPage {
         // ==================== 預覽更新 ====================
         const updatePreview = () => {
             previewIcon.style.backgroundColor = colorInput.value;
-            previewIcon.innerHTML = `<i class="${iconInput.value} text-xl"></i>`;
+            previewIcon.innerHTML = `<i class="${escAttr(iconInput.value)} text-xl"></i>`;
             previewName.textContent = nameInput.value || '新帳本';
         };
 
@@ -514,7 +514,7 @@ export class LedgersPage {
                     usersListEl.appendChild(el);
                 });
             }).catch(e => {
-                usersListEl.innerHTML = `<div class="text-red-500 text-center py-2 text-xs">無法載入名單：${e.message}</div>`;
+                usersListEl.innerHTML = `<div class="text-red-500 text-center py-2 text-xs">無法載入名單：${escAttr(e.message)}</div>`;
             });
 
             // == 取消共用 (擁有者專用) ==

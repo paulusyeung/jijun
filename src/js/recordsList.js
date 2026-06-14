@@ -1,4 +1,4 @@
-import { formatCurrency, formatDate, getDateRange } from './utils.js';
+import { formatCurrency, formatDate, getDateRange, escAttr } from './utils.js';
 import { createDateRangeModal } from './datePickerModal.js';
 
 export class RecordsListManager {
@@ -505,12 +505,12 @@ export class RecordsListManager {
                         </div>
                         <div class="flex flex-col justify-center min-w-0">
                             <div class="flex items-center gap-2">
-                                <p class="text-wabi-text-primary text-base font-medium line-clamp-1">${name}</p>
+                                <p class="text-wabi-text-primary text-base font-medium line-clamp-1">${escAttr(name)}</p>
                                 ${hasAmortization ? '<i class="fa-solid fa-credit-card text-blue-500 text-sm cursor-pointer amort-link-icon" title="分期計畫"></i>' : ''}
                                 ${hasDebt ? '<i class="fa-solid fa-handshake text-orange-500 text-sm" title="有關聯欠款"></i>' : ''}
                                 ${hasDebt && statusLabel ? `<span class="text-xs ${statusClass} px-1.5 py-0.5 rounded">${statusLabel}</span>` : ''}
                             </div>
-                            <p class="text-wabi-text-secondary text-sm font-normal line-clamp-2 break-all">${record.description || '無備註'}</p>
+                            <p class="text-wabi-text-secondary text-sm font-normal line-clamp-2 break-all">${escAttr(record.description || '無備註')}</p>
                         </div>
                     </div>
                         <div class="shrink-0 text-right">
@@ -621,7 +621,7 @@ export class RecordsListManager {
                                 <label class="flex items-center justify-between p-3 bg-wabi-surface rounded-lg border border-wabi-border">
                                     <div class="flex items-center">
                                         <input type="checkbox" data-cat-id="${catId}" class="h-5 w-5 rounded text-wabi-primary focus:ring-wabi-primary/50" ${isChecked ? 'checked' : ''}>
-                                        <span class="ml-3 text-wabi-text-primary">${category.name}</span>
+                                        <span class="ml-3 text-wabi-text-primary">${escAttr(category.name)}</span>
                                     </div>
                                     <span class="text-sm font-medium ${amountClass}">${formattedAmount}</span>
                                 </label>
@@ -666,7 +666,7 @@ export class RecordsListManager {
                                 <label class="flex items-center justify-between p-3 bg-wabi-surface rounded-lg border border-wabi-border">
                                     <div class="flex items-center">
                                         <input type="checkbox" data-acc-id="${account.id}" class="h-5 w-5 rounded text-wabi-primary focus:ring-wabi-primary/50" ${isChecked ? 'checked' : ''}>
-                                        <span class="ml-3 text-wabi-text-primary">${account.name}</span>
+                                        <span class="ml-3 text-wabi-text-primary">${escAttr(account.name)}</span>
                                     </div>
                                 </label>
                             `;

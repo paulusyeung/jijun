@@ -10,6 +10,7 @@ import { showToast } from './utils.js';
 // ── 常數設定 ──────────────────────────────────────────
 const AD_FREE_KEY = 'adFreeUntil';
 const AD_FREE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 小時
+const AD_FREE_SETTING_KEY = 'ad_free_until';
 
 // Web 廣告設定值（來源：package.json → adConfig，由 Vite 編譯時注入）
 const ADSENSE_CLIENT_ID = __AD_ADSENSE_CLIENT_ID__;
@@ -120,7 +121,7 @@ function parseTimestamp(value) {
 
 export class RewardService {
 
-    constructor() {
+    constructor(dataService) {
         // Web GPT 獎勵廣告狀態
         this._rewardedSlot = null;
         this._rewardPayload = null;
@@ -134,9 +135,41 @@ export class RewardService {
         this._admobModule = null;         // 延遲載入的 AdMob 模組
         this._admobListeners = [];        // 原生事件監聽 handle，供清理
 
+        // IndexedDB 資料存取（替代 localStorage）
+        this.dataService = dataService;
+        this._adFreeCached = null;        // 記憶體快取：timestamp ms 或 null
+
         // 原生環境：初始化 AdMob SDK
         if (isNative) {
             this._initAdMob();
+        }
+    }
+
+    /** 從 IndexedDB 載入無廣告狀態（含 localStorage 遷移） */
+    async init() {
+        try {
+            const setting = await this.dataService.getSetting(AD_FREE_SETTING_KEY);
+            if (setting?.value) {
+                this._adFreeCached = Number(setting.value);
+                // 清除舊的 localStorage 資料
+                localStorage.removeItem(AD_FREE_KEY);
+                return;
+            }
+        } catch (e) {
+            console.warn('[RewardService] Failed to load ad-free state from DB:', e);
+        }
+
+        // 遷移：從 localStorage 讀取舊資料
+        try {
+            const legacy = localStorage.getItem(AD_FREE_KEY);
+            if (legacy) {
+                this._adFreeCached = Number(legacy);
+                // 寫入 IndexedDB
+                await this.dataService.saveSetting({ key: AD_FREE_SETTING_KEY, value: String(this._adFreeCached) });
+                localStorage.removeItem(AD_FREE_KEY);
+            }
+        } catch (e) {
+            console.warn('[RewardService] Failed to migrate ad-free state from localStorage:', e);
         }
     }
 
@@ -163,25 +196,15 @@ export class RewardService {
 
     /** 檢查是否處於無廣告期間 */
     isAdFree() {
-        try {
-            const until = parseTimestamp(localStorage.getItem(AD_FREE_KEY));
-            if (isNaN(until)) return false;
-            return Date.now() < until;
-        } catch (e) {
-            return false;
-        }
+        if (this._adFreeCached === null || this._adFreeCached === undefined) return false;
+        return Date.now() < this._adFreeCached;
     }
 
     /** 取得剩餘無廣告時間（毫秒） */
     getAdFreeRemaining() {
-        try {
-            const until = parseTimestamp(localStorage.getItem(AD_FREE_KEY));
-            if (isNaN(until)) return 0;
-            const remaining = until - Date.now();
-            return remaining > 0 ? remaining : 0;
-        } catch (e) {
-            return 0;
-        }
+        if (this._adFreeCached === null || this._adFreeCached === undefined) return 0;
+        const remaining = this._adFreeCached - Date.now();
+        return remaining > 0 ? remaining : 0;
     }
 
     /** 格式化剩餘時間為可讀字串 */
@@ -194,10 +217,11 @@ export class RewardService {
     }
 
     /** 設定無廣告期間 */
-    _grantAdFree() {
+    async _grantAdFree() {
         try {
             const until = Date.now() + AD_FREE_DURATION_MS;
-            localStorage.setItem(AD_FREE_KEY, until.toString());
+            this._adFreeCached = until;
+            await this.dataService.saveSetting({ key: AD_FREE_SETTING_KEY, value: String(until) });
         } catch (e) {
             console.warn('無法儲存無廣告狀態:', e);
         }

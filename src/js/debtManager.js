@@ -1,5 +1,5 @@
 // 欠款管理模組
-import { formatCurrency, formatDate, formatDateToString, showToast, customConfirm, customAlert, escapeHTML } from './utils.js';
+import { formatCurrency, formatDate, formatDateToString, showToast, customConfirm, customAlert, escapeHTML, escAttr } from './utils.js';
 
 export class DebtManager {
   constructor(dataService) {
@@ -151,7 +151,7 @@ export class DebtManager {
       
       return `
         <tr class="border-b border-wabi-border last:border-b-0 hover:bg-wabi-bg cursor-pointer" data-contact-id="${contact.id}">
-          <td class="px-4 py-3 text-sm text-wabi-text-primary font-medium">${contact.name}</td>
+          <td class="px-4 py-3 text-sm text-wabi-text-primary font-medium">${escAttr(contact.name)}</td>
           <td class="px-4 py-3 text-sm text-wabi-income text-right">${summary.receivable > 0 ? formatCurrency(summary.receivable) : '-'}</td>
           <td class="px-4 py-3 text-sm text-wabi-expense text-right">${summary.payable > 0 ? formatCurrency(summary.payable) : '-'}</td>
           <td class="px-4 py-3 text-sm font-bold text-right ${net > 0 ? 'text-wabi-income' : net < 0 ? 'text-wabi-expense' : 'text-wabi-text-secondary'}">${net > 0 ? '+' : ''}${formatCurrency(net)}</td>
@@ -312,7 +312,7 @@ export class DebtManager {
                 <i class="fa-solid fa-user"></i>
               </div>
               <div>
-                <p class="font-medium text-wabi-text-primary">${contactName}</p>
+                <p class="font-medium text-wabi-text-primary">${escAttr(contactName)}</p>
                 <p class="text-sm text-wabi-text-secondary">${isReceivable ? '欠我' : '我欠'}</p>
               </div>
             </div>
@@ -322,7 +322,7 @@ export class DebtManager {
               <p class="text-xs text-wabi-text-secondary">${formatDate(debt.date, 'short')}</p>
             </div>
           </div>
-          ${debt.description ? `<p class="text-sm text-wabi-text-secondary mt-2 pl-13">${debt.description}</p>` : ''}
+          ${debt.description ? `<p class="text-sm text-wabi-text-secondary mt-2 pl-13">${escAttr(debt.description)}</p>` : ''}
           ${hasPartialPayments ? `
             <div class="mt-2">
               <div class="flex justify-between text-xs text-wabi-text-secondary mb-1">
@@ -509,7 +509,7 @@ export class DebtManager {
     modal.innerHTML = `
       <div class="bg-wabi-bg rounded-lg max-w-sm w-full p-6">
         <h3 class="text-lg font-semibold mb-4 text-wabi-primary">部分${isReceivable ? '收款' : '還款'}</h3>
-        <p class="text-sm text-wabi-text-secondary mb-4">${contactName} - ${debt.description || '無備註'}</p>
+        <p class="text-sm text-wabi-text-secondary mb-4">${escAttr(contactName)} - ${escAttr(debt.description || '無備註')}</p>
         <p class="text-sm text-wabi-text-secondary mb-2">剩餘金額：<span class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${formatCurrency(remainingAmount)}</span></p>
         
         <div class="mb-6">
@@ -689,7 +689,7 @@ export class DebtManager {
         <!-- Description -->
         <div class="mb-6">
           <label class="text-sm font-medium text-wabi-text-primary mb-2 block">備註</label>
-          <input type="text" id="debt-description" value="${debtToEdit?.description || ''}" placeholder="例如：午餐代墊"
+             <input type="text" id="debt-description" value="${escAttr(debtToEdit?.description || '')}" placeholder="例如：午餐代墊"
                  class="w-full p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary">
         </div>
 
@@ -805,7 +805,7 @@ export class DebtManager {
     modal.innerHTML = `
       <div class="bg-wabi-bg rounded-lg max-w-md w-full p-6">
         <h3 class="text-lg font-semibold mb-4 text-wabi-primary">提醒訊息</h3>
-        <textarea id="reminder-text" class="w-full h-32 p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary resize-none mb-4">${message}</textarea>
+        <textarea id="reminder-text" class="w-full h-32 p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary resize-none mb-4">${escAttr(message)}</textarea>
         <div class="flex space-x-3">
           <button id="copy-reminder-btn" class="flex-1 bg-wabi-primary hover:bg-wabi-primary/90 text-wabi-surface font-bold py-3 rounded-lg transition-colors">
             <i class="fa-solid fa-copy mr-2"></i>複製
@@ -903,7 +903,7 @@ export class DebtManager {
                 <div class="contact-avatar flex items-center justify-center rounded-full bg-wabi-primary/20 text-wabi-primary size-10 overflow-hidden" data-avatar-id="${contact.avatarFileId || ''}">
                   <i class="fa-solid fa-user"></i>
                 </div>
-                <span class="font-medium text-wabi-text-primary">${contact.name}</span>
+                <span class="font-medium text-wabi-text-primary">${escAttr(contact.name)}</span>
               </div>
               <div class="flex gap-2">
                 <button class="edit-contact-btn p-2" data-id="${contact.id}">
@@ -993,7 +993,7 @@ export class DebtManager {
         
         <div class="mb-6">
           <label class="text-sm font-medium text-wabi-text-primary mb-2 block">名稱</label>
-          <input type="text" id="contact-name" value="${escapeHTML(contactToEdit?.name || '')}" placeholder="輸入聯絡人名稱"
+             <input type="text" id="contact-name" value="${escAttr(contactToEdit?.name || '')}" placeholder="輸入聯絡人名稱"
                  class="w-full p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary">
         </div>
 

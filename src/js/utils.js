@@ -15,6 +15,99 @@ export function escapeHTML(str) {
     .replace(/'/g, '&#39;')
 }
 
+const DANGEROUS_HTML_TAGS = new Set(['script', 'object', 'embed', 'iframe', 'link', 'style'])
+const SVG_ALLOWED_TAGS = new Set([
+  'svg', 'g', 'path', 'circle', 'rect', 'ellipse', 'line', 'polyline', 'polygon', 'a',
+  'defs', 'lineargradient', 'radialgradient', 'stop', 'symbol', 'use', 'clippath',
+  'mask', 'pattern', 'image', 'text', 'tspan', 'title', 'desc'
+])
+const URL_ATTRS = new Set(['href', 'src', 'xlink:href'])
+
+function stripUnsafeAttributes(element) {
+  for (const attr of [...element.attributes]) {
+    const attrName = attr.name.toLowerCase()
+    const attrValue = attr.value.trim()
+
+    if (attrName.startsWith('on')) {
+      element.removeAttribute(attr.name)
+      continue
+    }
+
+    if (URL_ATTRS.has(attrName) && /^javascript:/i.test(attrValue)) {
+      element.removeAttribute(attr.name)
+    }
+  }
+}
+
+function sanitizeNodeTree(root, options = {}) {
+  const { allowedTags = null, removeTags = null } = options
+  if (root.nodeType === Node.ELEMENT_NODE) {
+    const rootTagName = root.tagName.toLowerCase()
+
+    if (removeTags?.has(rootTagName)) {
+      root.remove()
+      return
+    }
+
+    if (!allowedTags || allowedTags.has(rootTagName)) {
+      stripUnsafeAttributes(root)
+    }
+  }
+
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT)
+  const nodes = []
+
+  while (walker.nextNode()) {
+    nodes.push(walker.currentNode)
+  }
+
+  for (const element of nodes) {
+    const tagName = element.tagName.toLowerCase()
+
+    if (removeTags?.has(tagName)) {
+      element.remove()
+      continue
+    }
+
+    if (allowedTags && !allowedTags.has(tagName)) {
+      element.remove()
+      continue
+    }
+
+    stripUnsafeAttributes(element)
+  }
+}
+
+export function escAttr(str) {
+  return escapeHTML(str)
+}
+
+export function sanitizeHTML(str) {
+  if (str === null || str === undefined) return ''
+
+  const template = document.createElement('template')
+  template.innerHTML = String(str)
+  sanitizeNodeTree(template.content, { removeTags: DANGEROUS_HTML_TAGS })
+  return template.innerHTML
+}
+
+export function sanitizeSVG(svgString) {
+  if (svgString === null || svgString === undefined) return ''
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(String(svgString), 'image/svg+xml')
+  if (doc.querySelector('parsererror')) {
+    return ''
+  }
+
+  sanitizeNodeTree(doc.documentElement, { allowedTags: SVG_ALLOWED_TAGS, removeTags: DANGEROUS_HTML_TAGS })
+  return new XMLSerializer().serializeToString(doc.documentElement)
+}
+
+export function sanitizeText(str) {
+  return escapeHTML(str)
+}
+
 /**
  * 格式化日期為 YYYY-MM-DD 格式（避免時區問題）
  * @param {Date} date - 日期對象
@@ -601,4 +694,96 @@ export function calculateAmortizationDetails(principal, periods, annualRate, fre
   else amountPerPeriod = Math.round(exactPMT * 100) / 100;
 
   return { amountPerPeriod, exactTotalToPay };
+}
+
+// ── Token Encryption (Web Crypto PBKDF2 + AES-GCM) ───
+
+/**
+ * 使用 PBKDF2 從 deviceSecret + salt 推導 AES-GCM 金鑰
+ * @param {string} deviceSecret - 裝置專屬密鑰材料（如 deviceId）
+ * @param {Uint8Array} salt - 隨機鹽值（16 bytes）
+ * @param {number} iterations - PBKDF2 迭代次數（預設 100000）
+ * @returns {Promise<CryptoKey>}
+ */
+export async function deriveDeviceKey(deviceSecret, salt, iterations = 100000) {
+  const encoder = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(deviceSecret),
+    'PBKDF2',
+    false,
+    ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    {
+      name: 'PBKDF2',
+      salt,
+      iterations,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt']
+  );
+}
+
+/**
+ * 使用 AES-GCM 加密資料
+ * @param {string} plaintext - 明文
+ * @param {CryptoKey} key - AES-GCM 金鑰
+ * @returns {Promise<{ iv: Uint8Array, ciphertext: ArrayBuffer }>}
+ */
+export async function encryptData(plaintext, key) {
+  const encoder = new TextEncoder();
+  const iv = crypto.getRandomValues(new Uint8Array(12)); // 96-bit IV for GCM
+  const ciphertext = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    encoder.encode(plaintext)
+  );
+  return { iv, ciphertext };
+}
+
+/**
+ * 使用 AES-GCM 解密資料
+ * @param {ArrayBuffer} ciphertext - 密文
+ * @param {CryptoKey} key - AES-GCM 金鑰
+ * @param {Uint8Array} iv - 初始向量
+ * @returns {Promise<string>}
+ */
+export async function decryptData(ciphertext, key, iv) {
+  const decrypted = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv },
+    key,
+    ciphertext
+  );
+  const decoder = new TextDecoder();
+  return decoder.decode(decrypted);
+}
+
+/**
+ * 將 Uint8Array 轉為 base64url 字串
+ */
+export function bufferToBase64URL(buffer) {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+/**
+ * 將 base64url 字串轉為 Uint8Array
+ */
+export function base64URLToBuffer(str) {
+  str = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (str.length % 4) str += '=';
+  const binary = atob(str);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return bytes;
 }

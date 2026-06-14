@@ -7,7 +7,7 @@
 
 // showToast 暫存以便未來使用（目前未使用）
 // eslint-disable-next-line no-unused-vars
-import { showToast } from './utils.js';
+import { showToast, deriveDeviceKey, encryptData, decryptData, bufferToBase64URL, base64URLToBuffer } from './utils.js';
 
 /** @type {string} Google OAuth Client ID（透過 .env.local 設定，不硬編碼） */
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
@@ -88,10 +88,38 @@ export class SyncService {
     try {
       const tokenData = await this.dataService.getSetting('sync_tokens');
       if (tokenData?.value) {
-        this.accessToken = tokenData.value.access_token || null;
-        this.refreshToken = tokenData.value.refresh_token || null;
-        this.tokenExpiresAt = tokenData.value.expires_at || null;
-        this.userInfo = tokenData.value.user_info || null;
+        // 嘗試解密（新格式：_encrypted === true）
+        if (tokenData.value._encrypted) {
+          try {
+            const salt = base64URLToBuffer(tokenData.value.salt);
+            const iv = base64URLToBuffer(tokenData.value.iv);
+            const ciphertext = base64URLToBuffer(tokenData.value.data);
+            const key = await deriveDeviceKey(this.deviceId, salt);
+            const decrypted = await decryptData(ciphertext, key, iv);
+            const parsed = JSON.parse(decrypted);
+            this.accessToken = parsed.access_token || null;
+            this.refreshToken = parsed.refresh_token || null;
+            this.tokenExpiresAt = parsed.expires_at || null;
+            this.userInfo = parsed.user_info || null;
+          } catch (e) {
+            console.error('[SyncService] Failed to decrypt tokens, clearing:', e);
+            this.accessToken = null;
+            this.refreshToken = null;
+            this.tokenExpiresAt = null;
+            this.userInfo = null;
+          }
+        } else {
+          // 舊格式：純文字 JSON（需要遷移到加密）
+          this.accessToken = tokenData.value.access_token || null;
+          this.refreshToken = tokenData.value.refresh_token || null;
+          this.tokenExpiresAt = tokenData.value.expires_at || null;
+          this.userInfo = tokenData.value.user_info || null;
+
+          // 懶遷移：重新儲存（會自動加密）
+          if (this.accessToken) {
+            await this.saveTokens();
+          }
+        }
       }
 
       const serverSetting = await this.dataService.getSetting('sync_server_url');
@@ -196,12 +224,23 @@ export class SyncService {
         'https://www.googleapis.com/auth/drive.appdata'
       ];
 
+      // 產生 OAuth state 參數防止 CSRF
+      const state = crypto.randomUUID();
+      sessionStorage.setItem('oauth_state', state);
+
       await GoogleAuth.initialize({
         scopes: nativeScopes,
         grantOfflineAccess: true,
       });
 
       const result = await GoogleAuth.signIn();
+
+      // 驗證 state（Capacitor GoogleAuth 支援 state 屬性）
+      const storedState = sessionStorage.getItem('oauth_state');
+      sessionStorage.removeItem('oauth_state');
+      if (result.state && result.state !== storedState) {
+        throw new Error('OAuth state mismatch — possible CSRF attack');
+      }
 
       if (!result.serverAuthCode) {
         throw new Error('未取得 serverAuthCode (請確認 Google Cloud Console 設定了正確的 Web Client ID 且 forceCodeForRefreshToken為true)');
@@ -231,15 +270,29 @@ export class SyncService {
 
       const scopes = requestSharing ? SHARED_SCOPES : BASE_SCOPES;
 
+      // 產生 OAuth state 參數防止 CSRF
+      const state = crypto.randomUUID();
+      sessionStorage.setItem('oauth_state', state);
+
       const client = window.google.accounts.oauth2.initCodeClient({
         client_id: GOOGLE_CLIENT_ID,
         scope: scopes.join(' '),
         ux_mode: 'popup',
+        state: state,
         callback: async (response) => {
           if (response.error) {
             reject(new Error(response.error));
             return;
           }
+
+          // 驗證 state 參數
+          const storedState = sessionStorage.getItem('oauth_state');
+          sessionStorage.removeItem('oauth_state');
+          if (response.state !== storedState) {
+            reject(new Error('OAuth state mismatch — possible CSRF attack'));
+            return;
+          }
+
           try {
             await this.handleAuthCallback(response.code);
             if (requestSharing) {
@@ -362,18 +415,38 @@ export class SyncService {
   }
 
   /**
-   * 儲存 token 到 IndexedDB
+   * 儲存 token 到 IndexedDB（加密儲存）
    */
   async saveTokens() {
-    await this.dataService.saveSetting({
-      key: 'sync_tokens',
-      value: {
-        access_token: this.accessToken,
-        refresh_token: this.refreshToken,
-        expires_at: this.tokenExpiresAt,
-        user_info: this.userInfo,
-      },
-    });
+    const tokenPayload = {
+      access_token: this.accessToken,
+      refresh_token: this.refreshToken,
+      expires_at: this.tokenExpiresAt,
+      user_info: this.userInfo,
+    };
+
+    try {
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const key = await deriveDeviceKey(this.deviceId, salt);
+      const { iv, ciphertext } = await encryptData(JSON.stringify(tokenPayload), key);
+
+      await this.dataService.saveSetting({
+        key: 'sync_tokens',
+        value: {
+          _encrypted: true,
+          salt: bufferToBase64URL(salt),
+          iv: bufferToBase64URL(iv),
+          data: bufferToBase64URL(new Uint8Array(ciphertext)),
+        },
+      });
+    } catch (e) {
+      console.error('[SyncService] Failed to encrypt tokens:', e);
+      // Fallback: 如果加密失敗（例如不支援 Web Crypto），以明文儲存
+      await this.dataService.saveSetting({
+        key: 'sync_tokens',
+        value: tokenPayload,
+      });
+    }
   }
 
   /**
@@ -612,17 +685,33 @@ export class SyncService {
     const fileName = `sync_log_${this.deviceId}.json`;
 
     // 先找到已存在的 sync log file
-    const existingFileId = await this._findFile(fileName);
+    const existingFile = await this._findFile(fileName);
 
-    if (existingFileId) {
-      // 下載現有內容，合併後更新
-      const res = await this._downloadFile(existingFileId);
-      const existing = res?.data || { changes: [] };
-      existing.changes = [...(existing.changes || []), ...changes];
-      existing.timestamp = Date.now();
-      existing.deviceId = this.deviceId;
+    if (existingFile) {
+      // 下載現有內容，合併後更新（含 ETag 衝突重試）
+      const doUpdate = async (etag) => {
+        const res = await this._downloadFile(existingFile.id);
+        const existing = res?.data || { changes: [] };
+        existing.changes = [...(existing.changes || []), ...changes];
+        existing.timestamp = Date.now();
+        existing.deviceId = this.deviceId;
+        await this._updateFile(existingFile.id, JSON.stringify(existing), etag);
+      };
 
-      await this._updateFile(existingFileId, JSON.stringify(existing));
+      try {
+        await doUpdate(existingFile.etag);
+      } catch (e) {
+        if (e.message === 'CONFLICT') {
+          console.log('[SyncService] pushChanges: ETag conflict, re-downloading and retrying...');
+          // 重新下載取得最新 etag，再次嘗試
+          const refreshed = await this._downloadFile(existingFile.id);
+          if (refreshed) {
+            await doUpdate(refreshed.etag);
+          }
+        } else {
+          throw e;
+        }
+      }
     } else {
       // 建立新檔案
       await this._createFile(fileName, JSON.stringify(syncData));
@@ -822,10 +911,10 @@ export class SyncService {
           console.warn(`[SyncService] pushShared: 無法下載 "${ledger.name}" 的雲端檔案，略過`);
           continue;
         }
-        
+
         const cloudData = resFile.data || { changes: [] };
         const cloudChanges = cloudData.changes || [];
-        
+
         // 3. 建立雲端日誌鍵集合
         const cloudKeySet = new Set();
         cloudChanges.forEach(log => {
@@ -846,12 +935,27 @@ export class SyncService {
           continue;
         }
 
-        // 5. 合併並上傳
-        cloudData.changes = [...cloudChanges, ...myMissingChanges];
-        cloudData.timestamp = Date.now();
-        cloudData.deviceId = this.deviceId;
-        
-        await this._updateFile(ledger.sharedFileId, JSON.stringify(cloudData));
+        // 5. 合併並上傳（含 ETag 衝突重試）
+        const doUpdate = async (etag) => {
+          cloudData.changes = [...cloudChanges, ...myMissingChanges];
+          cloudData.timestamp = Date.now();
+          cloudData.deviceId = this.deviceId;
+          await this._updateFile(ledger.sharedFileId, JSON.stringify(cloudData), etag);
+        };
+
+        try {
+          await doUpdate(resFile.etag);
+        } catch (e) {
+          if (e.message === 'CONFLICT') {
+            console.log(`[SyncService] pushShared: ETag conflict for "${ledger.name}", re-downloading and retrying...`);
+            const refreshed = await this._downloadFile(ledger.sharedFileId);
+            if (refreshed) {
+              await doUpdate(refreshed.etag);
+            }
+          } else {
+            throw e;
+          }
+        }
         console.log(`[SyncService] pushShared: "${ledger.name}" 推送了 ${myMissingChanges.length} 筆變更`);
 
       } catch (e) {
@@ -1140,14 +1244,15 @@ export class SyncService {
    */
   async _findFile(fileName) {
     const res = await fetch(
-      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${fileName}'&fields=files(id)`,
+      `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${fileName}'&fields=files(id,etag)`,
       {
         headers: { Authorization: `Bearer ${this.accessToken}` },
       }
     );
     if (!res.ok) return null;
     const data = await res.json();
-    return data.files?.[0]?.id || null;
+    const file = data.files?.[0];
+    return file ? { id: file.id, etag: file.etag || null } : null;
   }
 
   /**
@@ -1182,7 +1287,8 @@ export class SyncService {
     );
     if (!res.ok) return null;
     const data = await res.json();
-    return { data };
+    const etag = res.headers.get('ETag') || null;
+    return { data, etag };
   }
 
   /**
@@ -1348,18 +1454,25 @@ export class SyncService {
    * @param {string} content
    * @param {string|null} matchTag - 用於樂觀鎖的 ETag
    */
-  async _updateFile(fileId, content) {
+  async _updateFile(fileId, content, etag = null) {
+    const headers = {
+      Authorization: `Bearer ${this.accessToken}`,
+      'Content-Type': 'application/json',
+    };
+    if (etag) {
+      headers['If-Match'] = etag;
+    }
     const res = await fetch(
       `https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`,
       {
         method: 'PATCH',
-        headers: {
-          Authorization: `Bearer ${this.accessToken}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: content,
       }
     );
+    if (res.status === 412) {
+      throw new Error('CONFLICT');
+    }
     if (!res.ok) {
       let errMsg = `Failed to update file (${res.status})`;
       try { const j = await res.json(); errMsg += ': ' + (j.error?.message || ''); } catch(_) { console.warn('Failed to parse error', _); }

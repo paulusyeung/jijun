@@ -1,4 +1,4 @@
-import { formatDate, formatDateToString, formatCurrency, showToast, escapeHTML, calculateAmortizationDetails, customConfirm, triggerHaptic } from '../utils.js';
+import { formatDate, formatDateToString, formatCurrency, showToast, escapeHTML, escAttr, calculateAmortizationDetails, customConfirm, triggerHaptic } from '../utils.js';
 
 export class AddPage {
     constructor(app) {
@@ -364,8 +364,8 @@ export class AddPage {
                     <label class="text-sm text-wabi-text-secondary">帳戶</label>
                     <button id="account-selector-btn" class="w-full flex items-center justify-between bg-wabi-surface py-1 px-2 mt-1 rounded-lg border border-wabi-border">
                         <div class="flex items-center gap-3 truncate">
-                            <i class="${selectedAccount.icon} text-lg"></i>
-                            <span class="font-medium">${selectedAccount.name}</span>
+                            <i class="${escAttr(selectedAccount.icon)} text-lg"></i>
+                            <span class="font-medium">${escAttr(selectedAccount.name)}</span>
                         </div>
                         <i class="fa-solid fa-chevron-down text-xs text-wabi-text-secondary"></i>
                     </button>
@@ -434,14 +434,14 @@ export class AddPage {
                     btn.classList.add(currentType === 'income' ? 'active-income' : 'active');
                 }
 
-                const colorStyle = cat.color.startsWith('#') ? `style="background-color: ${cat.color}"` : '';
+                const colorStyle = cat.color.startsWith('#') ? `style="background-color: ${escAttr(cat.color)}"` : '';
                 const colorClass = !cat.color.startsWith('#') ? cat.color : '';
 
                 btn.innerHTML = `
-                    <div class="flex size-12 items-center justify-center rounded-full ${colorClass} text-white" ${colorStyle}>
-                        <i class="${cat.icon} text-2xl"></i>
+                    <div class="flex size-12 items-center justify-center rounded-full ${escAttr(colorClass)} text-white" ${colorStyle}>
+                        <i class="${escAttr(cat.icon)} text-2xl"></i>
                     </div>
-                    <p class="text-xs text-center text-wabi-text-secondary">${cat.name}</p>
+                    <p class="text-xs text-center text-wabi-text-secondary">${escAttr(cat.name)}</p>
                 `;
                 btn.addEventListener('click', () => {
                     selectedCategory = cat.id;
@@ -460,13 +460,13 @@ export class AddPage {
 
         const updateSelectedCategoryUI = (category) => {
             if (category) {
-                const colorStyle = category.color.startsWith('#') ? `style="background-color: ${category.color}"` : '';
+                const colorStyle = category.color.startsWith('#') ? `style="background-color: ${escAttr(category.color)}"` : '';
                 const colorClass = !category.color.startsWith('#') ? category.color : '';
                 selectedCategoryUI.innerHTML = `
-                    <div class="flex items-center justify-center rounded-full ${colorClass} text-white shrink-0 size-12" ${colorStyle}>
-                        <i class="${category.icon} text-3xl"></i>
+                    <div class="flex items-center justify-center rounded-full ${escAttr(colorClass)} text-white shrink-0 size-12" ${colorStyle}>
+                        <i class="${escAttr(category.icon)} text-3xl"></i>
                     </div>
-                    <p class="text-lg font-medium flex-1 truncate">${category.name}</p>
+                    <p class="text-lg font-medium flex-1 truncate">${escAttr(category.name)}</p>
                 `;
             } else {
                 selectedCategoryUI.innerHTML = `<div class="flex items-center justify-center rounded-full bg-wabi-text-secondary/10 shrink-0 size-12"><i class="fa-solid fa-question text-3xl text-wabi-text-secondary"></i></div><p class="text-lg font-medium">選擇分類</p>`;

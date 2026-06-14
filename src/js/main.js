@@ -44,7 +44,7 @@ class EasyAccountingApp {
         this.ledgerManager = new LedgerManager(this.dataService, this);
         this.pluginManager = new PluginManager(this.dataService, this);
         this.syncService = new SyncService(this.dataService);
-        this.rewardService = new RewardService();
+        this.rewardService = new RewardService(this.dataService);
         this.notificationService = new NotificationService(this.dataService);
         this.themeManager = new ThemeManager(this.dataService);
 
@@ -77,6 +77,7 @@ class EasyAccountingApp {
         await this.categoryManager.init();
         await this.budgetManager.loadBudget();
         await this.ledgerManager.init();
+        await this.rewardService.init();
 
         const advancedModeSetting = await this.dataService.getSetting('advancedAccountModeEnabled');
         this.advancedModeEnabled = !!advancedModeSetting?.value;

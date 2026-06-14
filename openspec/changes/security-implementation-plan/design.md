@@ -21,6 +21,7 @@ The existing codebase has:
 - Harden sync server against abuse (rate limiting, no error leakage, strict CORS)
 - Validate ServiceWorker message origins
 - Enforce plugin ID format in storage layer
+- Preserve imported business data verbatim in storage while enforcing sanitization at render sinks
 
 **Non-Goals:**
 - Removing `unsafe-eval` or `unsafe-inline` from CSP (required by Chart.js and Tailwind JIT — upstream limitations)
@@ -32,9 +33,21 @@ The existing codebase has:
 ## Decisions
 
 ### Decision 1: DOM-based sanitization over DOMPurify
-**Choice:** Implement `escAttr()` using `textContent`-based HTML escaping and `sanitizeSVG()` via DOM traversal + attribute whitelist, rather than adding DOMPurify as a dependency.
+**Choice:** Implement `escAttr()` using `textContent`-based HTML escaping, `sanitizeHTML()` via DOMParser + element/attribute whitelist, and `sanitizeSVG()` via DOM traversal + attribute whitelist, rather than adding DOMPurify as a dependency.
 **Rationale:** The app only needs simple escaping (no rich text). DOMPurify is 33KB gzipped and adds a CDN dependency. The DOM-based approach covers all vectors: attribute injection, event handler attributes, `javascript:` URIs, and `<script>/<object>/<iframe>` removal.
 **Trade-off:** More code to maintain vs. a battle-tested library. If rich text rendering is ever needed, DOMPurify should be adopted then.
+
+**⚠ Design Clarification (added during review):** The original spec conflated `sanitizeHTML` and `escAttr` as the same operation. They serve different purposes:
+- `escAttr(str)` — Escapes ALL HTML. Uses `textContent`→`innerHTML` trick. Correct for attribute value contexts (`value="..."`, `data-x="..."`).
+- `sanitizeHTML(str)` — Strips dangerous elements (`<script>`, `<iframe>`, event handlers) while preserving safe HTML (`<b>`, `<i>`, `<a>`). Uses DOMParser to parse, then walks the DOM tree removing disallowed elements/attributes. **Cannot** use `textContent`-based approach as that destroys all formatting.
+- `sanitizeSVG(svgString)` — Similar to `sanitizeHTML` but with SVG-specific element/attribute whitelist (allows `<svg>`, `<path>`, `<circle>`, etc.; strips `<script>`, event handlers, `javascript:` URIs).
+
+All three must be implemented as separate functions with distinct mechanisms.
+
+### Decision 1A: Render-time escaping is the authoritative boundary
+**Choice:** Keep imported business data and user-controlled strings raw in storage and at helper call sites, and enforce escaping only at DOM insertion boundaries (`innerHTML`, attribute interpolation, SVG insertion, or plain-text helpers such as `showToast()`).
+**Rationale:** Sanitizing during import mutates user data irreversibly, and pre-sanitizing before `showToast()` causes double-escaped entities because the helper already uses `textContent`. A single output boundary avoids both data corruption and UI regressions.
+**Trade-off:** Every HTML-producing sink must be audited carefully. The payoff is consistent escaping behavior without mutating stored values.
 
 ### Decision 2: iframe sandbox for plugin isolation
 **Choice:** Replace the current Proxy + Blob URL sandbox with an `<iframe sandbox="allow-scripts">` (no `allow-same-origin`). Communication via `postMessage` with structured clone.
@@ -43,8 +56,8 @@ The existing codebase has:
 
 ### Decision 3: Web Crypto PBKDF2 for token encryption
 **Choice:** Derive an encryption key from `deviceId + salt` using PBKDF2, then encrypt OAuth tokens with AES-GCM.
-**Rationale:** This provides protection against passive storage access (e.g., another XSS vulnerability reading IndexedDB). Since the key material is on-device, it's not true zero-knowledge, but it raises the bar significantly. AES-GCM provides authenticated encryption.
-**Trade-off:** Key derivation adds ~100ms on init. Not cryptographically secret from a determined attacker with JS execution, but blocks casual data theft. A future improvement could use the WebAuthn API for stronger binding.
+**Rationale:** This provides protection against passive storage access (e.g., stolen backup files, device disposal, another vulnerability that leaks the database without JS execution). Since the key material is on-device (derived from `deviceId` stored in plaintext `localStorage` — see `dataService.js:14`), it's not true zero-knowledge, but it raises the bar significantly. AES-GCM provides authenticated encryption.
+**Trade-off:** Key derivation adds ~100ms on init. **Threat model honesty**: This encryption does NOT protect against in-browser attacks. Any XSS that can read `localStorage` can also read the `deviceId` and the salt from IndexedDB, then derive the same key. The encryption is defense-in-depth against storage theft, not against plugin sandbox escapes or XSS. A future improvement could use the WebAuthn API for stronger hardware-backed binding.
 
 ### Decision 4: ETag-based optimistic locking over CRDT
 **Choice:** Use Google Drive's ETag/If-Match headers for conflict detection on shared ledger files, rather than implementing CRDT-based merge logic.
@@ -62,18 +75,21 @@ The existing codebase has:
 **Trade-off:** Additional complexity in `pluginManager.js` to support both sandbox modes simultaneously during the transition period (6 months).
 
 ### Decision 7: Device-bound key derivation using Web Crypto's subtle.deriveBits
-**Choice:** Derive the AES-GCM encryption key from a combination of the device ID (stored in IndexedDB under a fixed key) and a random salt (generated on first run, stored alongside encrypted tokens). Use `crypto.subtle.importKey` + `crypto.subtle.deriveBits` with PBKDF2.
-**Rationale:** The device ID itself is not secret (it's in IndexedDB), but combining it with a random salt and deriving through PBKDF2 means an attacker who reads the database still needs to perform key derivation — which raises the bar against passive data theft. The salt ensures identical device IDs produce different keys.
-**Trade-off:** If the device ID is compromised (e.g., via XSS), the encryption provides limited additional protection. This is defense-in-depth, not a substitute for eliminating XSS. Future improvement: bind to WebAuthn credential for true hardware-backed key storage.
+**Choice:** Derive the AES-GCM encryption key from a combination of the device ID (stored in plaintext `localStorage` under key `sync_device_id`, see `dataService.js:14`) and a random salt (generated on first run, stored alongside encrypted tokens in IndexedDB). Use `crypto.subtle.importKey` + `crypto.subtle.deriveBits` with PBKDF2.
+**Rationale:** The device ID itself is not secret (it's in `localStorage`), but combining it with a random salt and deriving through PBKDF2 means an attacker who reads the database still needs to perform key derivation — which raises the bar against passive data theft. The salt ensures identical device IDs produce different keys.
+**Trade-off:** If the device ID is compromised (e.g., via XSS reading `localStorage`), the encryption provides **no additional protection** — the attacker can derive the same key. This is defense-in-depth against storage theft, not a substitute for eliminating XSS. Future improvement: bind to WebAuthn credential for true hardware-backed key storage.
 
 ## Risks / Trade-offs
 
 - **[High] Plugin breakage from iframe refactor**: Existing plugins written against the current `context.data`, `context.ui`, `context.storage` API will need updates to work with `postMessage`. **Mitigation**: Release a migration shim that auto-wraps old-style plugins for 6 months. Feature flag enables instant rollback if issues arise.
+- **[High] Plugin sandbox latency**: Every context API call becomes an asynchronous `postMessage` round-trip. `PluginStorage` does debounced DB reads — proxying through `postMessage` adds latency. `context.ui.navigateTo()` requires the iframe to tell the parent to change `window.location.hash`. **Mitigation**: Batch `postMessage` calls where possible; keep the shim transparent to existing Promise-based APIs.
 - **[High] Incomplete XSS sink audit**: If any of the 104+ `innerHTML` sinks is missed, stored XSS remains exploitable. **Mitigation**: Use automated ESLint-based scanning (Decision 5) to produce a reproducible checklist. Run the scan as part of CI/lint pipeline to catch regressions.
-- **[Medium] CSP `unsafe-eval` required**: Chart.js uses `new Function()` internally. Without it, charts break. **Mitigation**: Monitor chart.js issue #10694 for a fix; accept as known limitation.
-- **[Medium] Token encryption not true zero-knowledge**: Derived key is device-local. A sandbox-escape-level XSS could still exfiltrate the key. **Mitigation**: Combine with CSP to make XSS exploitation harder. Consider WebAuthn binding in future.
-- **[Low] ETag conflicts under concurrent edits**: Two users editing the same shared ledger simultaneously will cause one to get a 412 and retry. Acceptable for the target use case (1-5 users per ledger).
+- **[Medium] CSP `unsafe-eval` required**: Chart.js uses `new Function()` internally. Tailwind CDN also uses `eval()` for JIT compilation. Without `unsafe-eval`, charts and styling break. **Mitigation**: Monitor chart.js issue #10694 for a fix; accept as known limitation.
+- **[Medium] Token encryption not true zero-knowledge**: Derived key uses `deviceId` from plaintext `localStorage`. A sandbox-escape-level XSS can read both `deviceId` and the salt, then derive the same key. **Mitigation**: Combine with CSP to make XSS exploitation harder. Consider WebAuthn binding in future.
+- **[Low] ETag conflicts under concurrent edits**: Two users editing the same shared ledger simultaneously will cause one to get a 412 and retry. The current merge logic (`syncService.js` full comparison) must handle re-applying local changes on top of the fresh download. **Mitigation**: Acceptable for the target use case (1-5 users per ledger).
 - **[Low] postMessage origin validation complexity**: iframe sandbox messages originate from `null`/`about:blank`, requiring careful source identification. **Mitigation**: Use a unique channel identifier (random UUID per plugin instance) to validate message sources rather than relying on `event.origin`.
+- **[Medium] Client-side error XSS**: `showToast()` renders messages in the DOM. If that helper used `innerHTML`, server-provided error strings could become an XSS vector. **Mitigation**: keep `showToast()` on `textContent`, pass raw strings into it, and audit call sites so there is a single escaping boundary.
+- **[Medium] Plugin install integrity**: Plugins are stored as raw JS strings in IndexedDB with no hash or signature verification. A malicious plugin uploaded to the store could exfiltrate all financial data via `context.data.getRecords()`. **Mitigation**: Add SHA-256 hash verification at install time (Task 17). Document as known limitation that plugin store is the trust boundary.
 
 ## Rollback Plan
 
@@ -88,5 +104,6 @@ The existing codebase has:
 
 - **Unit tests** for `escAttr()`, `sanitizeHTML()`, `sanitizeSVG()` — written alongside implementation (Phase 1), not deferred
 - **Automated XSS regression tests** — inject known payloads into each user-data field and assert no script execution
+- **Import-path audit** — verify imported fields remain raw in storage and are neutralized only by downstream render sinks
 - **Integration tests** for OAuth flow with state validation, token encryption round-trip, and ETag conflict handling
 - **Manual smoke tests** for plugin compatibility (top 5 most-used plugins tested against new iframe sandbox)

@@ -1,4 +1,4 @@
-import { formatCurrency, showToast, escapeHTML, formatDateToString, customAlert, customConfirm } from '../utils.js';
+import { formatCurrency, showToast, escapeHTML, escAttr, formatDateToString, customAlert, customConfirm } from '../utils.js';
 import { FONT_AWESOME_ICONS } from '../fontAwesomeIcons.js';
 
 export class AccountsPage {
@@ -73,8 +73,8 @@ export class AccountsPage {
             accountEl.className = 'flex items-center justify-between bg-wabi-surface p-4 rounded-lg border border-wabi-border';
             accountEl.innerHTML = `
                 <div class="flex items-center gap-4">
-                    <div class="flex items-center justify-center rounded-lg ${account.color} text-wabi-surface shrink-0 size-12">
-                        <i class="${account.icon} text-2xl"></i>
+                    <div class="flex items-center justify-center rounded-lg ${escAttr(account.color)} text-wabi-surface shrink-0 size-12">
+                        <i class="${escAttr(account.icon)} text-2xl"></i>
                     </div>
                     <div>
                         <p class="font-medium text-wabi-text-primary">${escapeHTML(account.name)}</p>
@@ -264,11 +264,11 @@ export class AccountsPage {
                             <div class="flex items-center space-x-2 mb-2">
                                 <input type="text" id="custom-icon-input" 
                                        placeholder="設定預設 (如: fas fa-wallet)"
-                                       value="${escapeHTML(accountToEdit?.icon || 'fa-solid fa-wallet')}"
+                                                                             value="${escAttr(accountToEdit?.icon || 'fa-solid fa-wallet')}"
                                        class="flex-1 p-2 text-sm bg-transparent border border-wabi-border rounded-lg bg-wabi-surface focus:ring-2 focus:ring-wabi-accent focus:border-transparent text-wabi-text-primary">
                                 <button type="button" id="preview-icon-btn" class="px-3 py-2 bg-wabi-bg border border-wabi-border rounded-lg hover:bg-wabi-border transition-colors">
                                   <span id="icon-preview" class="text-lg text-wabi-primary">
-                                    <i class="${accountToEdit?.icon || 'fa-solid fa-wallet'}"></i>
+                                                                        <i class="${escAttr(accountToEdit?.icon || 'fa-solid fa-wallet')}"></i>
                                   </span>
                                 </button>
                             </div>
@@ -284,8 +284,8 @@ export class AccountsPage {
                     <div>
                         <label class="block text-sm font-medium text-wabi-text-secondary mb-2">選擇顏色</label>
                         <div class="grid grid-cols-6 gap-3 p-3 border border-wabi-border rounded-lg bg-wabi-surface" id="color-selector">
-                          ${this.getAvailableColors().map(color => `
-                            <button type="button" class="color-option w-8 h-8 rounded-lg border-2 border-transparent hover:border-wabi-primary transition-colors ${color}" data-color="${color}">
+                                                    ${this.getAvailableColors().map(color => `
+                                                        <button type="button" class="color-option w-8 h-8 rounded-lg border-2 border-transparent hover:border-wabi-primary transition-colors ${escAttr(color)}" data-color="${escAttr(color)}">
                             </button>
                           `).join('')}
                           <label for="custom-color-picker-input" id="custom-color-picker-label" class="w-8 h-8 rounded-lg border-2 border-dashed border-wabi-border flex items-center justify-center cursor-pointer hover:border-wabi-primary">
@@ -322,7 +322,7 @@ export class AccountsPage {
         // 圖標預覽功能
         const updateIconPreview = () => {
           const iconClass = customIconInput.value.trim() || 'fa-solid fa-wallet';
-          iconPreview.innerHTML = `<i class="${iconClass}"></i>`;
+          iconPreview.innerHTML = `<i class="${escAttr(iconClass)}"></i>`;
           selectedIcon = iconClass;
           document.querySelectorAll('.icon-option').forEach(b => {
              b.classList.remove('border-wabi-primary', 'bg-wabi-primary/10');

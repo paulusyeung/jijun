@@ -15,9 +15,9 @@ export class PluginStorage {
         if (!dataService) {
             throw new Error('PluginStorage requires a DataService instance.');
         }
-        // 驗證 pluginId 格式：僅允許英數字、點、底線、連字號 (降級為警告以維持向後相容)
+        // 驗證 pluginId 格式：僅允許英數字、點、底線、連字號
         if (!/^[a-zA-Z0-9._-]+$/.test(pluginId)) {
-            console.warn(`PluginStorage: Sub-optimal pluginId format: "${pluginId}". Only alphanumeric, dots, underscores, and hyphens are recommended.`);
+            throw new Error(`PluginStorage: Invalid pluginId format: "${pluginId}". Only alphanumeric, dots, underscores, and hyphens are allowed.`);
         }
         this.pluginId = pluginId;
         this.dataService = dataService;

@@ -1,7 +1,7 @@
 import { Chart, registerables } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { zhTW } from 'date-fns/locale';
-import { formatCurrency, getDateRange, escapeHTML } from './utils.js';
+import { formatCurrency, getDateRange, escapeHTML, escAttr } from './utils.js';
 import { createDateRangeModal } from './datePickerModal.js';
 
 Chart.register(...registerables);
@@ -260,9 +260,9 @@ export class StatisticsManager {
                              ${index + 1}
                         </div>
                         <div>
-                             <p class="text-sm font-bold text-wabi-text-primary">${r.description || categoryName}</p>
+                             <p class="text-sm font-bold text-wabi-text-primary">${escAttr(r.description || categoryName)}</p>
                              <div class="flex items-center gap-2 text-xs text-wabi-text-secondary">
-                                 <span><i class="${icon} mr-1"></i>${categoryName}</span>
+                                 <span><i class="${icon} mr-1"></i>${escAttr(categoryName)}</span>
                                  <span>•</span>
                                  <span>${r.date}</span>
                              </div>

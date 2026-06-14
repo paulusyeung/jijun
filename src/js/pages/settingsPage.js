@@ -1,4 +1,4 @@
-import { showToast, nativeShare, nativeFilePicker, nativeSaveFile, setHapticEnabled } from '../utils.js';
+import { showToast, nativeShare, nativeFilePicker, nativeSaveFile, setHapticEnabled, escAttr } from '../utils.js';
 import { DARK_THEME_ID } from '../themeManager.js';
 
 export class SettingsPage {
@@ -743,7 +743,7 @@ export class SettingsPage {
                     <i class="fa-solid fa-triangle-exclamation text-2xl text-wabi-expense"></i>
                 </div>
                 <h3 class="text-xl font-bold text-wabi-expense mb-2">確認操作</h3>
-                <p class="text-wabi-text-primary font-medium mb-6">${message}</p>
+                <p class="text-wabi-text-primary font-medium mb-6">${escAttr(message)}</p>
                 <div class="flex space-x-3">
                     <button id="settings-confirm-ok" class="flex-1 bg-wabi-expense hover:bg-red-600 text-wabi-surface font-bold py-3 rounded-lg transition-colors shadow-sm">
                         確定
@@ -769,10 +769,10 @@ export class SettingsPage {
         modal.innerHTML = `
             <div class="bg-wabi-bg rounded-lg max-w-sm w-full p-6 text-center shadow-xl">
                 <div class="size-12 bg-wabi-bg rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="${icon} text-2xl ${iconColor}"></i>
+                    <i class="${escAttr(icon)} text-2xl ${escAttr(iconColor)}"></i>
                 </div>
-                <h3 class="text-xl font-bold text-wabi-primary mb-2">${title}</h3>
-                <p class="text-wabi-text-primary font-medium mb-6">${message}</p>
+                <h3 class="text-xl font-bold text-wabi-primary mb-2">${escAttr(title)}</h3>
+                <p class="text-wabi-text-primary font-medium mb-6">${escAttr(message)}</p>
                 <button id="settings-alert-ok" class="w-full bg-wabi-primary hover:bg-wabi-primary-hover text-wabi-surface font-bold py-3 rounded-lg transition-colors shadow-sm">
                     我知道了
                 </button>

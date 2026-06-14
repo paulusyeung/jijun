@@ -20,6 +20,28 @@
 // ──────────────────────────────────────────────
 
 /**
+ * 簡易記憶體速率限制（適用於 standalone server；CF Worker 建議搭配正式 Rate Limiting 產品）
+ * 限制：10 req / 60s per IP
+ */
+const rateLimitMap = new Map();
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 10;
+
+function checkRateLimit(ip) {
+  const now = Date.now();
+  let entry = rateLimitMap.get(ip);
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + RATE_LIMIT_WINDOW_MS });
+    return true;
+  }
+  entry.count++;
+  if (entry.count > RATE_LIMIT_MAX) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * 建立 JSON 回應
  * @param {object} body  回應 body
  * @param {number} status  HTTP status code
@@ -67,6 +89,12 @@ function getCorsHeaders(request, allowedOriginsStr) {
  */
 async function handleTokenExchange(request, env, corsHeaders) {
   try {
+    const clientIp = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
+
+    if (!checkRateLimit(clientIp)) {
+      return jsonResponse({ error: 'Too many requests' }, 429, corsHeaders);
+    }
+
     const { code, redirect_uri } = await request.json();
 
     if (!code) {
@@ -88,16 +116,12 @@ async function handleTokenExchange(request, env, corsHeaders) {
     const data = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      return jsonResponse(
-        { error: 'Token exchange failed', details: data },
-        tokenResponse.status,
-        corsHeaders
-      );
+      return jsonResponse({ error: 'Token exchange failed' }, tokenResponse.status, corsHeaders);
     }
 
     return jsonResponse(data, 200, corsHeaders);
   } catch (err) {
-    return jsonResponse({ error: 'Internal error', message: err.message }, 500, corsHeaders);
+    return jsonResponse({ error: 'Internal error' }, 500, corsHeaders);
   }
 }
 
@@ -110,6 +134,12 @@ async function handleTokenExchange(request, env, corsHeaders) {
  */
 async function handleTokenRefresh(request, env, corsHeaders) {
   try {
+    const clientIp = request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
+
+    if (!checkRateLimit(clientIp)) {
+      return jsonResponse({ error: 'Too many requests' }, 429, corsHeaders);
+    }
+
     const { refresh_token } = await request.json();
 
     if (!refresh_token) {
@@ -130,16 +160,12 @@ async function handleTokenRefresh(request, env, corsHeaders) {
     const data = await tokenResponse.json();
 
     if (!tokenResponse.ok) {
-      return jsonResponse(
-        { error: 'Token refresh failed', details: data },
-        tokenResponse.status,
-        corsHeaders
-      );
+      return jsonResponse({ error: 'Token refresh failed' }, tokenResponse.status, corsHeaders);
     }
 
     return jsonResponse(data, 200, corsHeaders);
   } catch (err) {
-    return jsonResponse({ error: 'Internal error', message: err.message }, 500, corsHeaders);
+    return jsonResponse({ error: 'Internal error' }, 500, corsHeaders);
   }
 }
 

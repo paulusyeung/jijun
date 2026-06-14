@@ -1,4 +1,4 @@
-import { debounce, setStatusBarStyle } from './utils.js';
+import { debounce, sanitizeSVG, setStatusBarStyle } from './utils.js';
 
 // 內建深色主題 ID（不可刪除、自動更新）
 export const DARK_THEME_ID = 'com.walkingfish.theme.dark';
@@ -154,7 +154,7 @@ export class ThemeManager {
                     replacementNode.className = `${replacementInfo.className} theme-icon-replacement`;
                 } else if (replacementInfo.type === 'svg') {
                     const template = document.createElement('template');
-                    template.innerHTML = replacementInfo.svg.trim();
+                    template.innerHTML = sanitizeSVG(replacementInfo.svg).trim();
                     replacementNode = template.content.firstChild;
                     replacementNode.classList.add('theme-icon-replacement');
                     if (replacementInfo.className) {

@@ -7,7 +7,7 @@
  * 環境變數：
  *   GOOGLE_CLIENT_ID     — Google OAuth 2.0 Client ID
  *   GOOGLE_CLIENT_SECRET — Google OAuth 2.0 Client Secret
- *   ALLOWED_ORIGINS      — 逗號分隔的允許 CORS origin（預設 *）
+ *   ALLOWED_ORIGINS      — 逗號分隔的允許 CORS origin（預設空，不允許任何 origin）
  *   PORT                 — 監聽埠號（預設 8787）
  */
 
@@ -19,7 +19,7 @@ const PORT = parseInt(process.env.PORT || '8787', 10);
 const env = {
   GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID || '',
   GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET || '',
-  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || '*',
+  ALLOWED_ORIGINS: process.env.ALLOWED_ORIGINS || '',
 };
 
 // ──────────────────────────────────────────────

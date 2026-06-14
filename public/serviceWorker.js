@@ -213,6 +213,12 @@ async function cacheFirst(request) {
 
 // 處理訊息
 self.addEventListener('message', event => {
+  // 驗證訊息來源：僅接受來自自身 origin 的訊息
+  if (event.origin && event.origin !== self.location.origin) {
+    console.warn(`ServiceWorker: Ignored message from untrusted origin: ${event.origin}`);
+    return;
+  }
+
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting()
   }

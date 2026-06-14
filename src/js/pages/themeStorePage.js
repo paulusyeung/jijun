@@ -1,4 +1,4 @@
-import { showToast } from '../utils.js';
+import { showToast, escAttr } from '../utils.js';
 
 export class ThemeStorePage {
     constructor(app) {
@@ -50,12 +50,12 @@ export class ThemeStorePage {
 
              if (installed) {
                  if (this.app.pluginManager.compareVersions(t.version, installed.version) > 0) {
-                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-yellow-500 text-wabi-surface hover:bg-yellow-600 shadow w-full mt-3" data-url="${t.file}">更新 (v${t.version})</button>`;
+                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-yellow-500 text-wabi-surface hover:bg-yellow-600 shadow w-full mt-3" data-url="${escAttr(t.file)}">更新 (v${escAttr(t.version)})</button>`;
                  } else {
                       btnHtml = `<button class="px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-green-100 text-green-700 cursor-default w-full mt-3" disabled>已安裝</button>`;
                  }
              } else {
-                 btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow w-full mt-3" data-url="${t.file}">下載</button>`;
+                 btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow w-full mt-3" data-url="${escAttr(t.file)}">下載</button>`;
              }
 
              // Color Preview Blocks
@@ -84,9 +84,9 @@ export class ThemeStorePage {
                         <div class="flex items-start gap-4 mb-3">
                             ${thumbnailHtml}
                             <div class="min-w-0">
-                                <h4 class="font-bold text-wabi-text-primary text-lg">${t.name}</h4>
-                                <p class="text-xs text-wabi-text-secondary">v${t.version} • ${t.author || 'Unknown'}</p>
-                                <p class="text-sm text-wabi-text-secondary mt-1">${t.description}</p>
+                                <h4 class="font-bold text-wabi-text-primary text-lg">${escAttr(t.name)}</h4>
+                                <p class="text-xs text-wabi-text-secondary">v${escAttr(t.version)} • ${escAttr(t.author || 'Unknown')}</p>
+                                <p class="text-sm text-wabi-text-secondary mt-1">${escAttr(t.description)}</p>
                             </div>
                         </div>
                         ${colorBlocks}

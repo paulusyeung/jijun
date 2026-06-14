@@ -1,4 +1,4 @@
-import { showToast } from '../utils.js';
+import { showToast, escAttr } from '../utils.js';
 
 export class StorePage {
     constructor(app) {
@@ -61,12 +61,12 @@ export class StorePage {
 
              if (installed) {
                  if (this.app.pluginManager.compareVersions(p.version, installed.version) > 0) {
-                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-yellow-500 text-white hover:bg-yellow-600 shadow" data-url="${p.file}" data-id="${p.id}">更新 (v${p.version})</button>`;
+                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-yellow-500 text-white hover:bg-yellow-600 shadow" data-url="${escAttr(p.file)}" data-id="${escAttr(p.id)}">更新 (v${escAttr(p.version)})</button>`;
                  } else {
                       btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-green-100 text-green-700 cursor-default" disabled>已安裝</button>`;
                  }
              } else {
-                 btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow" data-url="${p.file}" data-id="${p.id}">安裝</button>`;
+                 btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow" data-url="${escAttr(p.file)}" data-id="${escAttr(p.id)}">安裝</button>`;
              }
 
              return `
@@ -76,9 +76,9 @@ export class StorePage {
                                 <i class="fa-solid ${p.icon || 'fa-puzzle-piece'}"></i>
                             </div>
                             <div>
-                                <h4 class="font-bold text-wabi-text-primary text-lg">${p.name}</h4>
-                                <p class="text-sm text-wabi-text-secondary line-clamp-1">${p.description}</p>
-                                <p class="text-xs text-wabi-text-secondary mt-1">v${p.version} • ${p.author || 'Unknown'}</p>
+                                <h4 class="font-bold text-wabi-text-primary text-lg">${escAttr(p.name)}</h4>
+                                <p class="text-sm text-wabi-text-secondary line-clamp-1">${escAttr(p.description)}</p>
+                                <p class="text-xs text-wabi-text-secondary mt-1">v${escAttr(p.version)} • ${escAttr(p.author || 'Unknown')}</p>
                             </div>
                         </div>
                         ${btnHtml}

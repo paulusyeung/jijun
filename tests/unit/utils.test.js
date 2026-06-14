@@ -1,5 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
-import { escapeHTML, formatDateToString, formatCurrency, isValidDate, debounce, throttle, deepClone, generateId } from '../../src/js/utils.js';
+import {
+    escapeHTML,
+    escAttr,
+    sanitizeHTML,
+    sanitizeSVG,
+    sanitizeText,
+    formatDateToString,
+    formatCurrency,
+    isValidDate,
+    debounce,
+    throttle,
+    deepClone,
+    generateId,
+} from '../../src/js/utils.js';
 
 describe('escapeHTML', () => {
     it('null / undefined 回傳空字串', () => {
@@ -43,6 +56,57 @@ describe('escapeHTML', () => {
         const input = '<a href="&test\'">';
         const output = escapeHTML(input);
         expect(output).toBe('&lt;a href=&quot;&amp;test&#39;&quot;&gt;');
+    });
+});
+
+describe('escAttr', () => {
+    it('escapes attribute-breaking characters', () => {
+        expect(escAttr('" onclick="alert(1)')).toBe('&quot; onclick=&quot;alert(1)');
+        expect(escAttr("' autofocus")).toBe('&#39; autofocus');
+    });
+
+    it('escapes a script payload for safe interpolation', () => {
+        expect(escAttr('<script>alert("xss")</script>')).toBe('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+    });
+});
+
+describe('sanitizeHTML', () => {
+    it('removes event handler attributes', () => {
+        expect(sanitizeHTML('<img src=x onerror=alert(1)>')).toBe('<img src="x">');
+    });
+
+    it('removes dangerous container tags', () => {
+        expect(sanitizeHTML('<script>alert(1)</script>hello')).toBe('hello');
+    });
+
+    it('removes javascript uris', () => {
+        expect(sanitizeHTML('<a href="javascript:alert(1)">click</a>')).toBe('<a>click</a>');
+    });
+
+    it('preserves safe formatting tags', () => {
+        expect(sanitizeHTML('<b>Hello</b> <i>world</i>')).toBe('<b>Hello</b> <i>world</i>');
+    });
+});
+
+describe('sanitizeSVG', () => {
+    it('removes event handlers from svg markup', () => {
+        expect(sanitizeSVG('<svg onload="alert(1)"><circle/></svg>')).toBe('<svg><circle/></svg>');
+    });
+
+    it('removes javascript href values', () => {
+        const result = sanitizeSVG('<svg><a href="javascript:alert(1)">click</a></svg>');
+        expect(result).not.toContain('javascript:');
+        expect(result).toContain('<a>click</a>');
+    });
+
+    it('removes script elements from svg markup', () => {
+        expect(sanitizeSVG('<svg><script>alert(1)</script><circle/></svg>')).toBe('<svg><circle/></svg>');
+    });
+});
+
+describe('sanitizeText', () => {
+    it('reuses HTML escaping for plain text rendering', () => {
+        expect(sanitizeText('<img src=x onerror=alert(1)>')).toBe('&lt;img src=x onerror=alert(1)&gt;');
     });
 });
 

@@ -51,3 +51,23 @@ The system SHALL sanitize SVG content fetched from installed themes via `sanitiz
 #### Scenario: Malicious theme SVG is neutralized
 - **WHEN** a theme with SVG containing `<svg onload="alert(1)">` is applied
 - **THEN** the `onload` attribute SHALL be stripped and no alert SHALL fire
+
+### Requirement: Plain-text UI helpers escape exactly once
+
+The system SHALL treat `showToast()` as a plain-text rendering boundary. Callers SHALL pass raw strings, and the helper SHALL render them using `textContent` so user-controlled content is escaped exactly once.
+
+#### Scenario: Raw error string renders safely in toast
+- **WHEN** a sync or server error message contains `<img src=x onerror=alert(1)>`
+- **THEN** the toast SHALL display the literal text
+- **THEN** no JavaScript SHALL execute
+- **THEN** the UI SHALL NOT show double-escaped entities caused by pre-sanitizing the message before calling `showToast()`
+
+### Requirement: Imported data is sanitized at render sinks, not during import
+
+The system SHALL preserve imported record fields, contact names, category names, and descriptions as raw data in storage. Any rendering path that uses `innerHTML` or attribute interpolation SHALL apply `escAttr()` or another context-appropriate sanitizer at the sink rather than mutating imported values during import.
+
+#### Scenario: Imported payload stays raw but renders safely
+- **WHEN** an imported record contains description `<script>alert(1)</script>`
+- **THEN** the stored record SHALL preserve the original string value
+- **THEN** any list, modal, or statistics view that renders the description through `innerHTML` SHALL escape it before insertion
+- **THEN** no JavaScript SHALL execute

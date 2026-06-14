@@ -1,4 +1,4 @@
-import { showToast, customConfirm } from '../utils.js';
+import { showToast, customConfirm, escAttr } from '../utils.js';
 
 export class SyncSettingsPage {
     constructor(app) {
@@ -35,7 +35,7 @@ export class SyncSettingsPage {
                             <div class="flex flex-wrap gap-2">
                                 <input type="url" id="sync-server-url-input"
                                     class="flex-1 min-w-0 px-3 py-2 rounded-lg border border-wabi-border bg-wabi-surface text-sm focus:ring-wabi-primary focus:border-wabi-primary"
-                                    value="${serverUrl}"
+                                    value="${escAttr(serverUrl)}"
                                     placeholder="https://jijun-server.the-walking-fish.com" />
                                 <button id="sync-server-save-btn" class="px-3 py-2 bg-wabi-primary text-wabi-surface rounded-lg text-sm font-medium hover:bg-wabi-primary/90 shrink-0">
                                     儲存
