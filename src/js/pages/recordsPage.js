@@ -44,6 +44,9 @@ export class RecordsPage {
                         <p class="text-wabi-text-primary text-sm font-medium leading-normal">類別</p>
                         <i class="fa-solid fa-chevron-down text-xs text-wabi-text-secondary"></i>
                     </button>
+                    <select id="records-group-filter" class="h-9 shrink-0 rounded-full bg-wabi-surface px-3 border border-wabi-border text-sm text-wabi-text-primary outline-none focus:ring-2 focus:ring-wabi-primary/50">
+                        <option value="">所有群組</option>
+                    </select>
                     <button id="records-account-filter-btn" class="h-9 shrink-0 flex items-center justify-center gap-x-1.5 rounded-full bg-wabi-surface px-4 border border-wabi-border hidden">
                         <p class="text-wabi-text-primary text-sm font-medium leading-normal">帳戶</p>
                         <i class="fa-solid fa-chevron-down text-xs text-wabi-text-secondary"></i>

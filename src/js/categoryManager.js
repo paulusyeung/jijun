@@ -10,6 +10,7 @@ export class CategoryManager {
     this.customCategories = { expense: [], income: [] };
     this.categoryOrder = { expense: [], income: [] };
     this.hiddenCategories = { expense: [], income: [] };
+    this.categoryGroups = { expense: [], income: [] };
   }
 
   async init() {
@@ -20,7 +21,7 @@ export class CategoryManager {
 
     try {
       let saved = await this.dataService.getCategorySetting('custom_categories');
-      
+
       // Migration from localStorage if IndexedDB is empty but localStorage has data
       if (!saved || !saved.value) {
         const localSaved = localStorage.getItem('customCategories');
@@ -33,15 +34,30 @@ export class CategoryManager {
       if (saved && saved.value) {
          this.customCategories = saved.value;
       }
-      
+
       const order = await this.dataService.getCategorySetting('category_order');
       if (order && order.value) this.categoryOrder = order.value;
-      
+
       const hidden = await this.dataService.getCategorySetting('hidden_categories');
       if (hidden && hidden.value) this.hiddenCategories = hidden.value;
 
+      await this._loadCategoryGroups();
+
     } catch (error) {
       console.error('載入分類設定失敗:', error);
+    }
+  }
+
+  async _loadCategoryGroups() {
+    try {
+      const groups = await this.dataService.getCategoryGroups({ allLedgers: true });
+      this.categoryGroups = { expense: [], income: [] };
+      for (const g of groups) {
+        if (!this.categoryGroups[g.type]) continue;
+        this.categoryGroups[g.type].push(g);
+      }
+    } catch (e) {
+      console.warn('Failed to load category groups:', e);
     }
   }
 
@@ -104,17 +120,52 @@ export class CategoryManager {
     return merged;
   }
 
+  getGroupedCategories(type) {
+    const allCats = this.getAllCategories(type, false);
+    const groups = this.categoryGroups[type] || [];
+    const result = [];
+    const unmatched = [];
+
+    for (const cat of allCats) {
+      const group = groups.find(g => cat.groupId === g.key || cat.groupId === g.uuid);
+      if (group) {
+        let entry = result.find(e => e.group.id === group.id);
+        if (!entry) {
+          entry = { group, categories: [] };
+          result.push(entry);
+        }
+        entry.categories.push(cat);
+      } else {
+        unmatched.push(cat);
+      }
+    }
+
+    if (unmatched.length > 0) {
+      result.push({
+        group: { id: null, name: '未分類', icon: 'fas fa-question', color: 'bg-gray-300', key: null, uuid: null },
+        categories: unmatched,
+      });
+    }
+
+    return result;
+  }
+
   async addCustomCategory(type, category) {
     if (!this.customCategories[type]) {
       this.customCategories[type] = []
     }
-    
-    // 檢查是否已存在
+
     const exists = this.customCategories[type].some(cat => cat.id === category.id)
     if (exists) {
       return false
     }
-    
+
+    // 自動指派「自訂」群組
+    if (!category.groupId) {
+      const customGroup = this.categoryGroups[type]?.find(g => g.name === '自訂');
+      if (customGroup) category.groupId = customGroup.uuid;
+    }
+
     this.customCategories[type].push(category)
     return await this.saveCustomCategories()
   }
@@ -191,6 +242,17 @@ export class CategoryManager {
                    placeholder="輸入分類名稱..."
                    value="${categoryToEdit ? escapeHTML(categoryToEdit.name) : ''}"
                    class="w-full p-3 bg-transparent border border-wabi-border rounded-lg focus:ring-2 focus:ring-wabi-accent focus:border-transparent text-wabi-text-primary">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-wabi-text-primary mb-2">所屬群組</label>
+            <select id="category-group-select" class="w-full p-3 bg-transparent border border-wabi-border rounded-lg focus:ring-2 focus:ring-wabi-accent focus:border-transparent text-wabi-text-primary">
+              ${this.categoryGroups[type]?.map(g => `
+                <option value="${g.uuid}" ${categoryToEdit && (categoryToEdit.groupId === g.uuid || categoryToEdit.groupId === g.key) ? 'selected' : ''}>
+                  ${escapeHTML(g.name)}
+                </option>
+              `).join('') || '<option value="">未分類</option>'}
+            </select>
           </div>
           
           <div>
@@ -407,6 +469,7 @@ export class CategoryManager {
         name: name,
         icon: selectedIcon,
         color: selectedColor,
+        groupId: document.getElementById('category-group-select')?.value || null,
         isCustom: true
       }
       
@@ -603,6 +666,9 @@ export class CategoryManager {
           <button id="add-new-category-btn" class="flex-1 bg-wabi-accent hover:bg-wabi-accent/90 text-wabi-primary font-bold py-3 rounded-lg transition-colors">
             新增分類
           </button>
+          <button id="manage-groups-btn" class="flex-1 bg-wabi-surface border border-wabi-border hover:bg-wabi-bg text-wabi-text-primary py-3 rounded-lg transition-colors">
+            管理群組
+          </button>
           <button id="close-manage-btn" class="px-6 bg-wabi-surface border border-wabi-border hover:bg-wabi-bg text-wabi-text-primary py-3 rounded-lg transition-colors">
             關閉
           </button>
@@ -677,9 +743,14 @@ export class CategoryManager {
     // 新增分類
     document.getElementById('add-new-category-btn').addEventListener('click', () => {
       this.closeManageCategoriesModal()
-      this.showAddCategoryModal(type, null, onUpdateCallback) // Pass callback
+      this.showAddCategoryModal(type, null, onUpdateCallback)
     })
-    
+
+    // 管理群組
+    document.getElementById('manage-groups-btn').addEventListener('click', () => {
+      this.showGroupManagementModal(type, onUpdateCallback)
+    })
+
     // 關閉按鈕
     document.getElementById('close-manage-btn').addEventListener('click', () => {
       this.closeManageCategoriesModal()
@@ -698,5 +769,187 @@ export class CategoryManager {
     if (modal) {
       modal.remove()
     }
+  }
+
+  // ── 群組管理 Modal ──
+
+  showGroupManagementModal(type, onUpdateCallback = null) {
+    const cgStore = this.categoryGroups[type] || [];
+    const typeText = type === 'expense' ? '支出' : '收入';
+
+    const modal = document.createElement('div');
+    modal.id = 'group-management-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center p-4';
+
+    modal.innerHTML = `
+      <div class="bg-wabi-bg rounded-lg max-w-md w-full max-h-[80vh] flex flex-col">
+        <div class="p-6 border-b border-wabi-border flex items-center justify-between">
+          <h3 class="text-lg font-semibold text-wabi-primary">管理${typeText}群組</h3>
+        </div>
+        <div id="group-list" class="flex-1 overflow-y-auto p-6 space-y-2">
+          ${cgStore.map(g => `
+            <div class="flex items-center justify-between p-3 bg-wabi-surface rounded-lg border border-wabi-border" data-group-id="${g.id}">
+              <div class="flex items-center gap-3">
+                <div class="size-9 flex items-center justify-center rounded-full ${g.color.startsWith('#') ? '' : g.color} text-white" ${g.color.startsWith('#') ? `style="background-color:${g.color}"` : ''}>
+                  <i class="${g.icon} text-base"></i>
+                </div>
+                <span class="font-medium text-wabi-text-primary">${escapeHTML(g.name)}</span>
+                ${g.isSystem ? '<span class="text-xs text-wabi-text-secondary bg-wabi-bg px-2 py-0.5 rounded">系統</span>' : ''}
+              </div>
+              <div class="flex items-center gap-1">
+                <button class="edit-group-btn size-8 flex items-center justify-center rounded-full text-wabi-accent hover:bg-wabi-bg transition-colors" data-group-id="${g.id}">
+                  <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                ${!g.isSystem ? `
+                <button class="delete-group-btn size-8 flex items-center justify-center rounded-full text-wabi-expense hover:bg-red-50 transition-colors" data-group-id="${g.id}">
+                  <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+          ${cgStore.length === 0 ? '<p class="text-center text-wabi-text-secondary py-8">尚無群組</p>' : ''}
+        </div>
+        <div class="p-6 border-t border-wabi-border flex space-x-3">
+          <button id="add-new-group-btn" class="flex-1 bg-wabi-accent hover:bg-wabi-accent/90 text-wabi-primary font-bold py-3 rounded-lg transition-colors">新增群組</button>
+          <button id="close-group-modal-btn" class="px-6 bg-wabi-surface border border-wabi-border hover:bg-wabi-bg text-wabi-text-primary py-3 rounded-lg transition-colors">關閉</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    // 新增群組
+    document.getElementById('add-new-group-btn').addEventListener('click', () => {
+      this.showAddGroupModal(type, null, async () => {
+        await this._loadCategoryGroups();
+        modal.remove();
+        this.showGroupManagementModal(type, onUpdateCallback);
+      });
+    });
+
+    // 編輯群組
+    modal.querySelectorAll('.edit-group-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const g = cgStore.find(x => x.id === parseInt(btn.dataset.groupId));
+        if (!g) return;
+        this.showAddGroupModal(type, g, async () => {
+          await this._loadCategoryGroups();
+          modal.remove();
+          this.showGroupManagementModal(type, onUpdateCallback);
+        });
+      });
+    });
+
+    // 刪除群組
+    modal.querySelectorAll('.delete-group-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const g = cgStore.find(x => x.id === parseInt(btn.dataset.groupId));
+        if (!g) return;
+        try {
+          await this.dataService.deleteCategoryGroup(g.id);
+          await this._loadCategoryGroups();
+          modal.remove();
+          this.showGroupManagementModal(type, onUpdateCallback);
+        } catch (e) {
+          customAlert(e.message);
+        }
+      });
+    });
+
+    document.getElementById('close-group-modal-btn').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+  }
+
+  showAddGroupModal(type, groupToEdit = null, onSaveCallback = null) {
+    const typeText = type === 'expense' ? '支出' : '收入';
+    const modal = document.createElement('div');
+    modal.id = 'add-group-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[70] flex items-center justify-center p-4';
+
+    modal.innerHTML = `
+      <div class="bg-wabi-bg rounded-lg max-w-md w-full p-6">
+        <h3 class="text-lg font-semibold text-wabi-primary mb-4">${groupToEdit ? '編輯' : '新增'}${typeText}群組</h3>
+
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-wabi-text-primary mb-2">群組名稱</label>
+            <input type="text" id="group-name" maxlength="10" placeholder="輸入群組名稱..."
+              value="${groupToEdit ? escapeHTML(groupToEdit.name) : ''}"
+              class="w-full p-3 bg-transparent border border-wabi-border rounded-lg focus:ring-2 focus:ring-wabi-accent focus:border-transparent text-wabi-text-primary">
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-wabi-text-primary mb-2">選擇圖示</label>
+            <input type="text" id="group-icon-input" placeholder="輸入 Font Awesome class"
+              value="${groupToEdit ? escapeHTML(groupToEdit.icon) : 'fas fa-folder'}"
+              class="w-full p-3 bg-transparent border border-wabi-border rounded-lg focus:ring-2 focus:ring-wabi-accent focus:border-transparent text-wabi-text-primary mb-2">
+            <div class="grid grid-cols-6 gap-2 max-h-32 overflow-y-auto" id="group-icon-selector">
+              ${this.getAvailableIcons().map(icon => `
+                <button type="button" class="group-icon-option p-2 border border-wabi-border rounded-lg hover:border-wabi-primary hover:bg-wabi-primary/10 transition-colors text-lg text-wabi-text-secondary" data-icon="${icon}">
+                  <i class="${icon}"></i>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-sm font-medium text-wabi-text-primary mb-2">選擇顏色</label>
+            <div class="grid grid-cols-6 gap-3" id="group-color-selector">
+              ${this.getAvailableColors().map(color => `
+                <button type="button" class="group-color-option w-10 h-10 rounded-lg border-2 border-transparent hover:border-wabi-primary transition-colors ${color}" data-color="${color}"></button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+
+        <div class="flex space-x-3 mt-6">
+          <button id="save-group-btn" class="flex-1 bg-wabi-accent hover:bg-wabi-accent/90 text-wabi-primary font-bold py-3 rounded-lg transition-colors">${groupToEdit ? '儲存變更' : '新增群組'}</button>
+          <button id="cancel-group-btn" class="px-6 bg-wabi-surface border border-wabi-border hover:bg-wabi-bg text-wabi-text-primary py-3 rounded-lg transition-colors">取消</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    let selectedIcon = groupToEdit ? groupToEdit.icon : 'fas fa-folder';
+    let selectedColor = groupToEdit ? groupToEdit.color : '';
+
+    modal.querySelectorAll('.group-icon-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.querySelectorAll('.group-icon-option').forEach(b => b.classList.remove('border-wabi-primary', 'bg-wabi-primary/10'));
+        btn.classList.add('border-wabi-primary', 'bg-wabi-primary/10');
+        selectedIcon = btn.dataset.icon;
+        document.getElementById('group-icon-input').value = selectedIcon;
+      });
+    });
+
+    modal.querySelectorAll('.group-color-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.querySelectorAll('.group-color-option').forEach(b => b.classList.remove('border-wabi-primary', 'ring-2', 'ring-wabi-accent'));
+        btn.classList.add('border-wabi-primary', 'ring-2', 'ring-wabi-accent');
+        selectedColor = btn.dataset.color;
+      });
+    });
+
+    document.getElementById('group-icon-input').addEventListener('input', () => {
+      selectedIcon = document.getElementById('group-icon-input').value.trim() || 'fas fa-folder';
+    });
+
+    document.getElementById('save-group-btn').addEventListener('click', async () => {
+      const name = document.getElementById('group-name').value.trim();
+      if (!name) { customAlert('請輸入群組名稱'); return; }
+
+      if (groupToEdit) {
+        await this.dataService.updateCategoryGroup(groupToEdit.id, { name, icon: selectedIcon, color: selectedColor });
+      } else {
+        const order = this.categoryGroups[type]?.length || 0;
+        await this.dataService.addCategoryGroup({ type, name, icon: selectedIcon, color: selectedColor, order: order + 1 });
+      }
+
+      modal.remove();
+      if (onSaveCallback) onSaveCallback();
+    });
+
+    document.getElementById('cancel-group-btn').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
   }
 }

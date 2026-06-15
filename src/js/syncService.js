@@ -792,7 +792,7 @@ export class SyncService {
     if (!changes || changes.length === 0) return;
 
     // 定義建立依賴的拓撲順序
-    const topoOrder = ['custom_categories', 'category_order', 'hidden_categories', 'ledgers', 'accounts', 'contacts', 'records', 'debts', 'recurring_transactions'];
+    const topoOrder = ['custom_categories', 'category_order', 'hidden_categories', 'categoryGroups', 'ledgers', 'accounts', 'contacts', 'records', 'debts', 'recurring_transactions'];
 
     // 嚴格排序邏輯：
     // 1. 主要依據 timestamp (由舊到新)
@@ -1747,6 +1747,11 @@ export class SyncService {
         await this.dataService.addRecurringTransaction(resolvedRecurring);
         break;
       }
+      case 'categoryGroups': {
+        const resolvedGroup = await this._resolveLedgerId(data);
+        await this.dataService.addCategoryGroup(resolvedGroup, true);
+        break;
+      }
       default:
         console.warn('[SyncService] Unknown store for add:', storeName);
     }
@@ -1891,6 +1896,11 @@ export class SyncService {
           await this.dataService.updateRecurringTransaction(id, resolvedRecurring, true);
           break;
         }
+        case 'categoryGroups': {
+          const resolvedGroup = await this._resolveLedgerId(data);
+          await this.dataService.updateCategoryGroup(id, resolvedGroup, true);
+          break;
+        }
         default:
           console.warn('[SyncService] Unknown store for update:', storeName);
       }
@@ -1937,6 +1947,9 @@ export class SyncService {
           break;
         case 'recurring_transactions':
           await this.dataService.deleteRecurringTransaction(id, true);
+          break;
+        case 'categoryGroups':
+          await this.dataService.deleteCategoryGroup(id, true);
           break;
         default:
           console.warn('[SyncService] Unknown store for delete:', storeName);

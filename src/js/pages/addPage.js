@@ -425,31 +425,51 @@ export class AddPage {
 
         const renderCategories = () => {
             categoryGrid.innerHTML = '';
-            const categories = this.app.categoryManager.getAllCategories(currentType);
-            categories.forEach(cat => {
-                const btn = document.createElement('button');
-                btn.className = 'category-button flex flex-col items-center gap-1 p-2 rounded-lg border-2 border-transparent';
-                btn.dataset.categoryId = cat.id;
-                if (cat.id === selectedCategory) {
-                    btn.classList.add(currentType === 'income' ? 'active-income' : 'active');
-                }
-
-                const colorStyle = cat.color.startsWith('#') ? `style="background-color: ${escAttr(cat.color)}"` : '';
-                const colorClass = !cat.color.startsWith('#') ? cat.color : '';
-
-                btn.innerHTML = `
-                    <div class="flex size-12 items-center justify-center rounded-full ${escAttr(colorClass)} text-white" ${colorStyle}>
-                        <i class="${escAttr(cat.icon)} text-2xl"></i>
-                    </div>
-                    <p class="text-xs text-center text-wabi-text-secondary">${escAttr(cat.name)}</p>
+            const grouped = this.app.categoryManager.getGroupedCategories(currentType);
+            grouped.forEach(({ group, categories }) => {
+                const groupId = group.key || group.uuid || 'uncategorized';
+                const header = document.createElement('button');
+                header.className = 'group-header col-span-4 flex items-center gap-2 w-full px-2 py-1.5 rounded-lg text-left text-sm font-medium text-wabi-text-secondary hover:bg-wabi-surface';
+                header.innerHTML = `
+                    <i class="fa-solid fa-chevron-down text-xs transition-transform"></i>
+                    <i class="${escAttr(group.icon)} text-sm"></i>
+                    <span>${escAttr(group.name)}</span>
+                    <span class="ml-auto text-xs opacity-50">${categories.length}</span>
                 `;
-                btn.addEventListener('click', () => {
-                    selectedCategory = cat.id;
-                    updateSelectedCategoryUI(cat);
-                    document.querySelectorAll('.category-button').forEach(b => b.classList.remove('active', 'active-income'));
-                    btn.classList.add(currentType === 'income' ? 'active-income' : 'active');
+                const container = document.createElement('div');
+                container.className = 'group-categories col-span-4 grid grid-cols-4 gap-2';
+                categories.forEach(cat => {
+                    const btn = document.createElement('button');
+                    btn.className = 'category-button flex flex-col items-center gap-1 p-2 rounded-lg border-2 border-transparent';
+                    btn.dataset.categoryId = cat.id;
+                    if (cat.id === selectedCategory) {
+                        btn.classList.add(currentType === 'income' ? 'active-income' : 'active');
+                    }
+
+                    const colorStyle = cat.color.startsWith('#') ? `style="background-color: ${escAttr(cat.color)}"` : '';
+                    const colorClass = !cat.color.startsWith('#') ? cat.color : '';
+
+                    btn.innerHTML = `
+                        <div class="flex size-12 items-center justify-center rounded-full ${escAttr(colorClass)} text-white" ${colorStyle}>
+                            <i class="${escAttr(cat.icon)} text-2xl"></i>
+                        </div>
+                        <p class="text-xs text-center text-wabi-text-secondary">${escAttr(cat.name)}</p>
+                    `;
+                    btn.addEventListener('click', () => {
+                        selectedCategory = cat.id;
+                        updateSelectedCategoryUI(cat);
+                        document.querySelectorAll('.category-button').forEach(b => b.classList.remove('active', 'active-income'));
+                        btn.classList.add(currentType === 'income' ? 'active-income' : 'active');
+                    });
+                    container.appendChild(btn);
                 });
-                categoryGrid.appendChild(btn);
+                header.addEventListener('click', () => {
+                    const isHidden = container.style.display === 'none';
+                    container.style.display = isHidden ? 'grid' : 'none';
+                    header.querySelector('.fa-chevron-down').style.transform = isHidden ? '' : 'rotate(-90deg)';
+                });
+                categoryGrid.appendChild(header);
+                categoryGrid.appendChild(container);
             });
             const manageBtn = document.createElement('button');
             manageBtn.className = 'flex flex-col items-center gap-1 p-2 rounded-lg border-2 border-dashed border-wabi-border hover:border-wabi-primary';

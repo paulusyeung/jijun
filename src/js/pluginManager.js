@@ -194,7 +194,8 @@ export class PluginManager {
       getContacts: () => this.dataService.getContacts(),
       getAccounts: () => this.dataService.getAccounts(),
       getCategories: (type) => this.app.categoryManager.getAllCategories(type),
-      getCategory: (type, id) => this.app.categoryManager.getCategoryById(type, id)
+      getCategory: (type, id) => this.app.categoryManager.getCategoryById(type, id),
+      getCategoryGroups: (type) => this.app.categoryManager.getGroupedCategories(type)
     } : {};
 
     const dataWrite = has('data:write') ? {
@@ -566,6 +567,7 @@ export class PluginManager {
                     else if (method === 'getContacts') result = await this.dataService.getContacts();
                     else if (method === 'getAccounts') result = await this.dataService.getAccounts();
                     else if (method === 'getCategories') result = this.app.categoryManager.getAllCategories(args[0]);
+                    else if (method === 'getCategoryGroups') result = this.app.categoryManager.getGroupedCategories(args[0]);
                     else if (method === 'getCategory') result = this.app.categoryManager.getCategoryById(args[0], args[1]);
                     else if (method === 'addRecord') { await this.dataService.addRecord(args[0]); result = undefined; }
                     else if (method === 'addDebt') { await this.dataService.addDebt(args[0]); result = undefined; }

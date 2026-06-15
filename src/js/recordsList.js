@@ -15,6 +15,7 @@ export class RecordsListManager {
             type: 'all',
             categories: new Set(),
             accounts: new Set(), // Add accounts filter
+            group: '',
             customStartDate: null,
             customEndDate: null,
             searchQuery: '',
@@ -112,11 +113,41 @@ export class RecordsListManager {
                 this.filters.type = e.target.dataset.type;
                 this.updateTypeButtons();
                 this.applyFiltersAndRender(); // Re-apply filters on existing data
+                if (groupFilter) populateGroupFilter();
             }        });
 
         this.container.querySelector('#records-category-filter-btn').addEventListener('click', () => {
             this.showCategoryFilterModal();
         });
+
+        // 群組篩選
+        const groupFilter = this.container.querySelector('#records-group-filter');
+        const populateGroupFilter = () => {
+            const type = this.filters.type === 'all' ? null : this.filters.type;
+            const currentVal = groupFilter.value;
+            const types = type ? [type] : ['expense', 'income'];
+            const seen = new Set();
+            let options = '<option value="">所有群組</option>';
+            for (const t of types) {
+                const grouped = this.categoryManager.getGroupedCategories(t);
+                for (const { group } of grouped) {
+                    const gid = group.key || group.uuid;
+                    if (gid && !seen.has(gid)) {
+                        seen.add(gid);
+                        options += `<option value="${gid}">${escAttr(group.name)}</option>`;
+                    }
+                }
+            }
+            groupFilter.innerHTML = options;
+            if (currentVal && seen.has(currentVal)) groupFilter.value = currentVal;
+        };
+        if (groupFilter) {
+            populateGroupFilter();
+            groupFilter.addEventListener('change', () => {
+                this.filters.group = groupFilter.value;
+                this.applyFiltersAndRender();
+            });
+        }
 
         if (this.advancedModeEnabled) {
             this.container.querySelector('#records-account-filter-btn').addEventListener('click', () => {
@@ -284,6 +315,23 @@ export class RecordsListManager {
 
         if (this.filters.categories.size > 0) {
             baseFilteredRecords = baseFilteredRecords.filter(r => this.filters.categories.has(r.category));
+        }
+
+        if (this.filters.group) {
+            const groupCatIds = new Set();
+            const types = this.filters.type === 'all' ? ['expense', 'income'] : [this.filters.type];
+            for (const t of types) {
+                const grouped = this.categoryManager.getGroupedCategories(t);
+                for (const { group, categories } of grouped) {
+                    const gid = group.key || group.uuid;
+                    if (gid === this.filters.group) {
+                        categories.forEach(c => groupCatIds.add(c.id));
+                    }
+                }
+            }
+            if (groupCatIds.size > 0) {
+                baseFilteredRecords = baseFilteredRecords.filter(r => groupCatIds.has(r.category));
+            }
         }
 
         if (this.advancedModeEnabled && this.filters.accounts.size > 0) {

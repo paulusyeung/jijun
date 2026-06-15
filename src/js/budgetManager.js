@@ -8,6 +8,7 @@ export class BudgetManager {
     this.currentBudget = 0
     this.categoryBudgets = {}
     this.categoryBudgetOrder = []
+    this.groupBudgets = {}
   }
 
   async loadBudget() {
@@ -26,10 +27,11 @@ export class BudgetManager {
         }
 
         if (budgetSettings && budgetSettings.value) {
-          const { monthlyBudget, categoryBudgets, categoryBudgetOrder } = budgetSettings.value;
+          const { monthlyBudget, categoryBudgets, categoryBudgetOrder, groupBudgets } = budgetSettings.value;
           this.currentBudget = monthlyBudget ? parseFloat(monthlyBudget) : 0;
           this.categoryBudgets = categoryBudgets || {};
           this.categoryBudgetOrder = categoryBudgetOrder || Object.keys(this.categoryBudgets);
+          this.groupBudgets = groupBudgets || {};
           return;
         }
       }
@@ -57,7 +59,7 @@ export class BudgetManager {
     }
   }
 
-  async saveBudget(amount, categoryBudgets = null, categoryBudgetOrder = null, skipLog = false) {
+  async saveBudget(amount, categoryBudgets = null, categoryBudgetOrder = null, groupBudgets = null, skipLog = false) {
     try {
       this.currentBudget = amount
       if (categoryBudgets !== null) {
@@ -65,6 +67,9 @@ export class BudgetManager {
       }
       if (categoryBudgetOrder !== null) {
         this.categoryBudgetOrder = categoryBudgetOrder;
+      }
+      if (groupBudgets !== null) {
+        this.groupBudgets = groupBudgets;
       }
       
       let ledgerSuffix = '';
@@ -76,9 +81,10 @@ export class BudgetManager {
       localStorage.setItem(`monthlyBudget${ledgerSuffix}`, this.currentBudget.toString())
       localStorage.setItem(`categoryBudgets${ledgerSuffix}`, JSON.stringify(this.categoryBudgets))
       localStorage.setItem(`categoryBudgetOrder${ledgerSuffix}`, JSON.stringify(this.categoryBudgetOrder))
+      localStorage.setItem(`groupBudgets${ledgerSuffix}`, JSON.stringify(this.groupBudgets))
 
       if (this.dataService) {
-        const payload = { monthlyBudget: this.currentBudget, categoryBudgets: this.categoryBudgets, categoryBudgetOrder: this.categoryBudgetOrder };
+        const payload = { monthlyBudget: this.currentBudget, categoryBudgets: this.categoryBudgets, categoryBudgetOrder: this.categoryBudgetOrder, groupBudgets: this.groupBudgets };
         await this.dataService.saveSetting({ key: `budget_settings${ledgerSuffix}`, value: payload });
         
         if (!skipLog) {
@@ -133,13 +139,36 @@ export class BudgetManager {
       categoryStatuses.sort((a, b) => b.percentage - a.percentage);
     }
 
+    const groupStatuses = [];
+    if (window.app && window.app.categoryManager) {
+      const grouped = window.app.categoryManager.getGroupedCategories('expense');
+      for (const { group, categories } of grouped) {
+        const gid = group.key || group.uuid;
+        if (!gid || !this.groupBudgets[gid]) continue;
+        const budgetAmount = this.groupBudgets[gid];
+        if (budgetAmount <= 0) continue;
+        const groupSpent = categories.reduce((sum, cat) => sum + (stats.expenseByCategory[cat.id] || 0), 0);
+        groupStatuses.push({
+          groupId: gid,
+          name: group.name,
+          icon: group.icon,
+          budget: budgetAmount,
+          spent: groupSpent,
+          remaining: Math.max(0, budgetAmount - groupSpent),
+          percentage: Math.min(100, budgetAmount > 0 ? (groupSpent / budgetAmount) * 100 : 0),
+          isOverBudget: groupSpent > budgetAmount
+        });
+      }
+    }
+
     return {
       budget: this.currentBudget,
       spent: spent,
       remaining: remaining,
       percentage: Math.min(100, percentage),
       isOverBudget: spent > this.currentBudget,
-      categoryStatuses: categoryStatuses
+      categoryStatuses: categoryStatuses,
+      groupStatuses: groupStatuses
     }
   }
 
@@ -200,6 +229,31 @@ export class BudgetManager {
                 </div>
               </div>
             ` : ''}
+            ${status.groupStatuses && status.groupStatuses.length > 0 ? `
+              <div class="mt-4 pt-3 border-t border-wabi-border/50">
+                <div class="text-sm font-medium text-wabi-text-secondary mb-2">群組預算</div>
+                <div class="space-y-3">
+                  ${status.groupStatuses.map(gs => `
+                    <div class="category-budget-item">
+                      <div class="flex justify-between items-end mb-1">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                          <i class="${gs.icon} text-wabi-text-secondary"></i>
+                          <span class="text-sm text-wabi-text-primary truncate">${escapeHTML(gs.name)}</span>
+                        </div>
+                        <div class="text-right flex-shrink-0">
+                          <div class="text-sm font-medium ${gs.isOverBudget ? 'text-wabi-expense' : 'text-wabi-text-primary'}">
+                            ${formatCurrency(gs.spent)} <span class="text-[0.65rem] text-wabi-text-secondary font-normal">/ ${formatCurrency(gs.budget)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="h-1.5 w-full bg-wabi-border/50 rounded-full overflow-hidden flex">
+                        <div class="h-full rounded-full transition-all duration-500 ease-out ${gs.isOverBudget ? 'bg-wabi-expense' : (gs.percentage > 80 ? 'bg-wabi-expense/80' : 'bg-wabi-accent')}" style="width: ${gs.percentage}%"></div>
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
           ` : `
             <div class="text-center py-8">
               <div class="text-4xl mb-3">💰</div>
@@ -243,6 +297,13 @@ export class BudgetManager {
         </div>
 
         <div class="mb-6 pt-4 border-t border-wabi-border">
+          <label class="block text-sm font-medium text-wabi-text-primary mb-2">群組預算 (選填)</label>
+          <div id="group-budgets-list" class="space-y-2 mb-3">
+            <!-- 群組預算會動態生成於此 -->
+          </div>
+        </div>
+
+        <div class="mb-6 pt-4 border-t border-wabi-border">
           <div class="flex justify-between items-center mb-2">
             <label class="block text-sm font-medium text-wabi-text-primary">分類預算 (選填)</label>
             <button id="add-category-budget-btn" class="text-xs text-wabi-accent hover:underline flex items-center gap-1">
@@ -271,6 +332,7 @@ export class BudgetManager {
     const categoryBudgetsList = modal.querySelector('#category-budgets-list');
     const workingCategoryBudgets = { ...this.categoryBudgets };
     let workingCategoryBudgetOrder = [...(this.categoryBudgetOrder || Object.keys(this.categoryBudgets))];
+    const workingGroupBudgets = { ...this.groupBudgets };
     let sortableInstance = null;
 
     const renderCategoryBudgetList = () => {
@@ -358,6 +420,39 @@ export class BudgetManager {
       });
     };
 
+    const renderGroupBudgetList = () => {
+      const groupBudgetsList = modal.querySelector('#group-budgets-list');
+      if (!groupBudgetsList) return;
+      groupBudgetsList.innerHTML = '';
+      if (!window.app || !window.app.categoryManager) return;
+      const grouped = window.app.categoryManager.getGroupedCategories('expense');
+      grouped.forEach(({ group }) => {
+        const gid = group.key || group.uuid;
+        if (!gid) return;
+        const amount = workingGroupBudgets[gid] || 0;
+        const item = document.createElement('div');
+        item.className = 'flex items-center gap-2 bg-wabi-surface p-2 rounded border border-wabi-border';
+        item.innerHTML = `
+          <i class="${group.icon} text-wabi-text-secondary w-6 text-center text-sm"></i>
+          <span class="flex-1 text-sm text-wabi-text-primary truncate">${escapeHTML(group.name)}</span>
+          <div class="flex-col w-28">
+            <input type="number" data-id="${gid}" value="${amount}" min="0" step="500" class="group-budget-amt w-full bg-transparent border-b border-wabi-border focus:border-wabi-accent outline-none text-right px-1 py-1 text-sm text-wabi-text-primary">
+          </div>
+        `;
+        groupBudgetsList.appendChild(item);
+      });
+
+      groupBudgetsList.querySelectorAll('.group-budget-amt').forEach(el => {
+        el.addEventListener('change', (e) => {
+          const id = e.target.getAttribute('data-id');
+          const val = parseFloat(e.target.value);
+          if (!isNaN(val) && val >= 0) {
+            workingGroupBudgets[id] = val;
+          }
+        });
+      });
+    };
+
     const checkBudgetWarning = () => {
         const budgetInput = document.getElementById('budget-input');
         const warningEl = document.getElementById('budget-warning-msg');
@@ -379,6 +474,7 @@ export class BudgetManager {
     modal.querySelector('#budget-input').addEventListener('input', checkBudgetWarning);
 
     renderCategoryBudgetList();
+    renderGroupBudgetList();
 
     // 新增分類預算邏輯
     modal.querySelector('#add-category-budget-btn').addEventListener('click', () => {
@@ -441,7 +537,7 @@ export class BudgetManager {
           showToast('預算設定已儲存', 'success')
         }
 
-        await this.saveBudget(amount, workingCategoryBudgets, workingCategoryBudgetOrder)
+        await this.saveBudget(amount, workingCategoryBudgets, workingCategoryBudgetOrder, workingGroupBudgets)
         this.closeBudgetModal()
         if (window.app && window.app.router && window.app.router.routes['home']) {
             window.app.router.routes['home'].loadBudgetWidget();

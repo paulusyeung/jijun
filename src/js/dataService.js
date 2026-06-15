@@ -7,7 +7,7 @@ const openDB = window.idb?.openDB || (() => {
 class DataService {
   constructor() {
     this.dbName = 'EasyAccountingDB'
-    this.dbVersion = 12 // Schema version 12: Add amortizationId index to records
+    this.dbVersion = 13 // Schema version 13: categoryGroups (分類群組)
     this.db = null
     this.useLocalStorage = false
     this.hookProvider = null; // Function to trigger hooks
@@ -236,6 +236,85 @@ class DataService {
                         recordStore.createIndex('amortizationId', 'amortizationId', { unique: false });
                     }
                 }
+            }
+            // Schema version 13: categoryGroups (分類群組)
+            if (oldVersion < 13) {
+                if (!db.objectStoreNames.contains('categoryGroups')) {
+                    const cgStore = db.createObjectStore('categoryGroups', {
+                        keyPath: 'id',
+                        autoIncrement: true
+                    });
+                    cgStore.createIndex('uuid', 'uuid', { unique: true });
+                    cgStore.createIndex('ledgerId', 'ledgerId');
+                    cgStore.createIndex('type', 'type');
+                }
+
+                // 為預設帳本（id=1）播種預設群組
+                const defaultLedgerId = 1;
+                const now = Date.now();
+                const defaultExpenseGroups = [
+                    { key: 'dining',         name: '餐飲', icon: 'fas fa-utensils',     color: 'bg-red-500',     order: 1 },
+                    { key: 'living',         name: '生活', icon: 'fas fa-home',         color: 'bg-blue-500',    order: 2 },
+                    { key: 'transport',      name: '交通', icon: 'fas fa-car',          color: 'bg-green-500',   order: 3 },
+                    { key: 'entertainment',  name: '娛樂', icon: 'fas fa-gamepad',      color: 'bg-purple-500',  order: 4 },
+                    { key: 'medical',        name: '醫療', icon: 'fas fa-hospital',     color: 'bg-pink-500',    order: 5 },
+                    { key: 'education',      name: '教育', icon: 'fas fa-book',         color: 'bg-indigo-500',  order: 6 },
+                    { key: 'finance',        name: '金融', icon: 'fas fa-hand-holding-usd', color: 'bg-orange-500', order: 7 },
+                    { key: 'other',          name: '其他', icon: 'fas fa-box',          color: 'bg-gray-500',    order: 8 },
+                ];
+                const defaultIncomeGroups = [
+                    { key: 'salary',         name: '薪資',     icon: 'fas fa-money-bill-wave', color: 'bg-green-600', order: 1 },
+                    { key: 'extra_income',   name: '額外收入', icon: 'fas fa-gift',            color: 'bg-yellow-500', order: 2 },
+                    { key: 'investment',     name: '投資',     icon: 'fas fa-chart-line',       color: 'bg-emerald-500', order: 3 },
+                    { key: 'finance_income', name: '金融',     icon: 'fas fa-hand-holding-usd', color: 'bg-orange-500', order: 4 },
+                    { key: 'other_income',   name: '其他',     icon: 'fas fa-box',             color: 'bg-gray-500', order: 5 },
+                ];
+
+                const cgStore2 = transaction.objectStore('categoryGroups');
+                const uuid = (p) => (self.crypto && self.crypto.randomUUID) ? self.crypto.randomUUID() :
+                    'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                        const r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                        return v.toString(16);
+                    });
+
+                for (const g of defaultExpenseGroups) {
+                    const group = { ...g, uuid: uuid(), ledgerId: defaultLedgerId, type: 'expense', isSystem: true, createdAt: now };
+                    await cgStore2.add(group);
+                }
+                for (const g of defaultIncomeGroups) {
+                    const group = { ...g, uuid: uuid(), ledgerId: defaultLedgerId, type: 'income', isSystem: true, createdAt: now };
+                    await cgStore2.add(group);
+                }
+
+                // 為已有的自訂分類指派 fallback group（自訂 group）
+                try {
+                    const settingsStore = transaction.objectStore('settings');
+                    const customCatSetting = await settingsStore.get('custom_categories');
+                    if (customCatSetting && customCatSetting.value) {
+                        const types = ['expense', 'income'];
+                        const fallbackGroups = {};
+                        for (const t of types) {
+                            const fb = { key: null, name: '自訂', icon: 'fas fa-pen', color: 'bg-teal-500', order: 99,
+                                uuid: uuid(), ledgerId: defaultLedgerId, type: t, isSystem: true, createdAt: now };
+                            const fbId = await cgStore2.add(fb);
+                            fallbackGroups[t] = { uuid: fb.uuid, id: fbId };
+                        }
+                        const cats = customCatSetting.value;
+                        for (const t of types) {
+                            if (cats[t]) {
+                                cats[t] = cats[t].map(c => {
+                                    if (!c.groupId) c.groupId = fallbackGroups[t].uuid;
+                                    return c;
+                                });
+                            }
+                        }
+                        await settingsStore.put(customCatSetting);
+                    }
+                } catch (e) {
+                    console.warn('[Migration v13] Failed to migrate custom categories:', e);
+                }
+
+                console.info('[Migration v13] categoryGroups store created and default groups seeded.');
             }
           }
         })
@@ -698,6 +777,111 @@ class DataService {
     }
   }
 
+  // --- Category Group Methods ---
+
+  async addCategoryGroup(data, skipLog = false) {
+    try {
+      if (!data.uuid) data.uuid = this.generateUUID();
+      const dataToSave = {
+        ...data,
+        key: data.isSystem ? (data.key || null) : null,
+        ledgerId: data.ledgerId ?? this.activeLedgerId,
+        createdAt: data.createdAt ?? Date.now(),
+      };
+      const tx = this.db.transaction('categoryGroups', 'readwrite');
+      const id = await tx.store.add(dataToSave);
+      await tx.done;
+      if (!skipLog) await this.logChange('add', 'categoryGroups', id, dataToSave);
+      return id;
+    } catch (error) {
+      console.error('Failed to add category group:', error);
+      throw error;
+    }
+  }
+
+  async getCategoryGroups(filters = {}) {
+    try {
+      let items = await this.db.getAll('categoryGroups');
+      if (!filters.allLedgers) {
+        const targetLedgerId = filters.ledgerId ?? this.activeLedgerId;
+        items = items.filter(g => g.ledgerId === targetLedgerId);
+      }
+      if (filters.type) {
+        items = items.filter(g => g.type === filters.type);
+      }
+      items.sort((a, b) => (a.order ?? 99) - (b.order ?? 99));
+      return items;
+    } catch (error) {
+      console.error('Failed to get category groups:', error);
+      return [];
+    }
+  }
+
+  async getCategoryGroup(id) {
+    try {
+      return await this.db.get('categoryGroups', id);
+    } catch (error) {
+      console.error(`Failed to get category group ${id}:`, error);
+      return null;
+    }
+  }
+
+  async updateCategoryGroup(id, updates, skipLog = false) {
+    try {
+      const tx = this.db.transaction('categoryGroups', 'readwrite');
+      const item = await tx.store.get(id);
+      if (item) {
+        const finalUpdates = { ...updates };
+        delete finalUpdates.isSystem;
+        delete finalUpdates.key;
+        delete finalUpdates.createdAt;
+        if (skipLog) {
+          delete finalUpdates.id;
+          if (item.uuid) finalUpdates.uuid = item.uuid;
+        }
+        const updated = { ...item, ...finalUpdates };
+        await tx.store.put(updated);
+        await tx.done;
+        if (!skipLog) await this.logChange('update', 'categoryGroups', id, updated);
+        return updated;
+      }
+      throw new Error('Category group not found');
+    } catch (error) {
+      console.error(`Failed to update category group ${id}:`, error);
+      throw error;
+    }
+  }
+
+  async deleteCategoryGroup(id, skipLog = false) {
+    try {
+      // 檢查是否有分類仍參照此群組
+      const categories = await this.getCategorySetting('custom_categories');
+      const group = await this.getCategoryGroup(id);
+      if (group && categories?.value) {
+        for (const type of ['expense', 'income']) {
+          const cats = categories.value[type] || [];
+          const referenced = cats.filter(c => c.groupId === group.uuid || c.groupId === group.key);
+          if (referenced.length > 0) {
+            throw new Error(`無法刪除群組：尚有 ${referenced.length} 個分類參照此群組`);
+          }
+        }
+      }
+      const tx = this.db.transaction('categoryGroups', 'readwrite');
+      let uuid = null;
+      if (!skipLog) {
+        const item = await tx.store.get(id);
+        uuid = item?.uuid;
+      }
+      await tx.store.delete(id);
+      await tx.done;
+      if (!skipLog) await this.logChange('delete', 'categoryGroups', id, { uuid });
+      return true;
+    } catch (error) {
+      console.error(`Failed to delete category group ${id}:`, error);
+      throw error;
+    }
+  }
+
   // --- Recurring Transaction Methods ---
   async addRecurringTransaction(transaction, skipLog = false) {
     try {
@@ -976,9 +1160,13 @@ class DataService {
       try {
           amortizations = await this.getAmortizations({ allLedgers: true });
       } catch (e) {console.warn('Silenced error:', e);}
+      let categoryGroups = [];
+      try {
+          categoryGroups = await this.getCategoryGroups({ allLedgers: true });
+      } catch (e) {console.warn('Silenced error:', e);}
 
       const exportData = {
-        version: '2.3.0',
+        version: '2.4.0',
         exportDate: new Date().toISOString(),
         settings: {
             advancedAccountModeEnabled: advancedAccountModeEnabled?.value || false,
@@ -992,6 +1180,7 @@ class DataService {
         debts: debts,
         recurring_transactions: recurring_transactions,
         amortizations: amortizations,
+        categoryGroups: categoryGroups,
         customCategories: customCategoriesMap,
         categoryOrder: categoryOrderMap,
         hiddenCategories: hiddenCategoriesMap,
@@ -1066,6 +1255,11 @@ class DataService {
               const txA = this.db.transaction('amortizations', 'readwrite');
               await txA.store.clear();
               await txA.done;
+            } catch (e) {console.warn('Silenced error:', e);}
+            try {
+              const txCg = this.db.transaction('categoryGroups', 'readwrite');
+              await txCg.store.clear();
+              await txCg.done;
             } catch (e) {console.warn('Silenced error:', e);}
           }
           await this.saveSetting({ key: 'advancedAccountModeEnabled', value: false });
@@ -1340,6 +1534,20 @@ class DataService {
                   }
                   await txAmort.done;
               } catch (e) { console.warn('匯入攤提資料時發生錯誤:', e); }
+          }
+
+          // 11. 匯入 Category Groups
+          if (data.categoryGroups && Array.isArray(data.categoryGroups)) {
+              try {
+                  const txCg = this.db.transaction('categoryGroups', 'readwrite');
+                  for (const cg of data.categoryGroups) {
+                      const { id, ...cgData } = cg;
+                      if (!cgData.uuid) cgData.uuid = this.generateUUID();
+                      cgData.ledgerId = getMappedLedgerId(cgData.ledgerId);
+                      await txCg.store.add(cgData);
+                  }
+                  await txCg.done;
+              } catch (e) { console.warn('匯入分類群組時發生錯誤:', e); }
           }
 
           resolve({ 
@@ -1707,9 +1915,22 @@ class DataService {
     const advancedAccountModeEnabled = await this.getSetting('advancedAccountModeEnabled');
     const debtManagementEnabled = await this.getSetting('debtManagementEnabled');
 
+    let amortizations = [];
+    try {
+        amortizations = isSharedSync
+            ? (await this.getAmortizations({ allLedgers: true })).filter(a => validLedgerIds.has(a.ledgerId))
+            : await this.getAmortizations({ allLedgers: true });
+    } catch (e) {}
+
+    let categoryGroups = [];
+    try {
+        categoryGroups = isSharedSync
+            ? (await this.getCategoryGroups({ allLedgers: true })).filter(g => validLedgerIds.has(g.ledgerId))
+            : await this.getCategoryGroups({ allLedgers: true });
+    } catch (e) {}
 
     return {
-      version: '2.3.0',
+      version: '2.4.0',
       exportDate: new Date().toISOString(),
       settings: {
         advancedAccountModeEnabled: advancedAccountModeEnabled?.value || false,
@@ -1721,7 +1942,9 @@ class DataService {
       contacts,
       debts,
       recurring_transactions,
+      amortizations,
       ...(isSharedSync ? {} : {
+        categoryGroups,
         customCategories,
         categoryOrder,
         hiddenCategories,

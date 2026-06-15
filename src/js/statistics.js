@@ -20,7 +20,9 @@ export class StatisticsManager {
             customStartDate: null,
             customEndDate: null,
             selectedAccountId: null, // null means all accounts
+            groupMode: false,
         };
+        this._drillDownGroup = null; // group key when drilling into a group
     }
 
     async renderStatisticsPage(container) {
@@ -97,7 +99,10 @@ export class StatisticsManager {
 
             <!-- Donut Chart: Expense Distribution -->
             <div class="rounded-xl bg-wabi-surface p-4 sm:p-6 shadow-sm border border-wabi-border mb-8">
-                <h2 class="text-base font-bold mb-4 text-wabi-primary">支出分佈</h2>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-wabi-primary">支出分佈</h2>
+                    <button id="stats-expense-group-toggle" class="text-xs px-2 py-1 rounded-lg border border-wabi-border text-wabi-text-secondary hover:bg-wabi-bg">依群組顯示</button>
+                </div>
                 <div id="stats-expense-donut-container" class="flex flex-col items-center gap-6 sm:flex-row">
                     <!-- Chart will be rendered here -->
                 </div>
@@ -105,7 +110,10 @@ export class StatisticsManager {
 
             <!-- Donut Chart: Income Distribution -->
             <div class="mb-8 rounded-xl bg-wabi-surface p-4 sm:p-6 shadow-sm border border-wabi-border">
-                <h2 class="text-base font-bold mb-4 text-wabi-primary">收入分佈</h2>
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-base font-bold text-wabi-primary">收入分佈</h2>
+                    <button id="stats-income-group-toggle" class="text-xs px-2 py-1 rounded-lg border border-wabi-border text-wabi-text-secondary hover:bg-wabi-bg">依群組顯示</button>
+                </div>
                 <div id="stats-income-donut-container" class="flex flex-col items-center gap-6 sm:flex-row">
                     <!-- Chart will be rendered here -->
                 </div>
@@ -181,6 +189,23 @@ export class StatisticsManager {
                     this.loadStatisticsData();
                 });
             }
+        }
+
+        const expenseToggle = this.container.querySelector('#stats-expense-group-toggle');
+        const incomeToggle = this.container.querySelector('#stats-income-group-toggle');
+        if (expenseToggle) {
+            expenseToggle.addEventListener('click', () => {
+                this.filters.groupMode = !this.filters.groupMode;
+                this._drillDownGroup = null;
+                this.loadStatisticsData();
+            });
+        }
+        if (incomeToggle) {
+            incomeToggle.addEventListener('click', () => {
+                this.filters.groupMode = !this.filters.groupMode;
+                this._drillDownGroup = null;
+                this.loadStatisticsData();
+            });
         }
     }
 
@@ -350,193 +375,192 @@ export class StatisticsManager {
         });
     }
 
-    renderExpenseDonutChart(expenseData) {
-        const container = this.container.querySelector('#stats-expense-donut-container');
-        if (this.charts.expenseDonut) this.charts.expenseDonut.destroy();
-
-        const totalExpense = Object.values(expenseData).reduce((a, b) => a + b, 0);
-        if (totalExpense === 0) {
-            container.innerHTML = `<p class="text-center text-wabi-text-secondary py-8">此期間無支出紀錄</p>`;
-            return;
+    _aggregateByGroup(categoryData, type) {
+        const grouped = this.categoryManager.getGroupedCategories(type);
+        const groupMap = {};
+        for (const cat of categoryData) {
+            let groupKey = null;
+            for (const entry of grouped) {
+                if (entry.categories.some(c => c.id === cat.id)) {
+                    groupKey = entry.group.key || entry.group.uuid;
+                    if (!groupMap[groupKey]) {
+                        groupMap[groupKey] = {
+                            id: groupKey, name: entry.group.name,
+                            icon: entry.group.icon, color: entry.group.color,
+                            value: 0, categories: []
+                        };
+                    }
+                    groupMap[groupKey].value += cat.value;
+                    groupMap[groupKey].categories.push(cat);
+                    break;
+                }
+            }
+            if (!groupKey) {
+                const key = '__ungrouped';
+                if (!groupMap[key]) {
+                    const uncatGroup = grouped.find(g => g.group.id === null) || { group: { name: '未分類', icon: 'fas fa-question', color: 'bg-gray-300' } };
+                    groupMap[key] = {
+                        id: key, name: uncatGroup.group.name,
+                        icon: uncatGroup.group.icon, color: uncatGroup.group.color,
+                        value: 0, categories: []
+                    };
+                }
+                groupMap[key].value += cat.value;
+                groupMap[key].categories.push(cat);
+            }
         }
-
-        container.innerHTML = `
-            <div class="relative flex size-40 items-center justify-center sm:size-48">
-                <canvas id="stats-expense-donut-chart"></canvas>
-                <div class="absolute text-center">
-                    <p class="text-xs text-wabi-text-secondary">總支出</p>
-                    <p class="text-lg font-bold text-wabi-primary">${formatCurrency(totalExpense)}</p>
-                </div>
-            </div>
-            <div id="stats-expense-legend" class="w-full flex-1 space-y-3"></div>
-        `;
-
-        const categoryData = Object.keys(expenseData).map(id => {
-            const category = this.categoryManager.getCategoryById('expense', id);
-            return {
-                id: id,
-                name: category?.name || '其他',
-                value: expenseData[id],
-                color: category?.color || 'bg-gray-400'
-            };
-        }).sort((a, b) => b.value - a.value);
-
-        const labels = categoryData.map(c => c.name);
-        const values = categoryData.map(c => c.value);
-        // The color is a tailwind class like `bg-red-500`. We need the hex code for Chart.js.
-        // This is a temporary solution. A better solution would be to have a mapping from tailwind classes to hex codes.
-        const colors = categoryData.map(c => {
-            if (c.color.startsWith('#')) {
-                return c.color; // Already a hex code
-            }
-            const colorClass = c.color;
-            const match = colorClass.match(/bg-(.*)-(\d+)/);
-            if (match) {
-                const colorName = match[1];
-                const colorValue = match[2];
-                // This is a very simplified mapping and will not work for all tailwind colors.
-                const colorMap = {
-                    slate: '#64748b',
-                    stone: '#78716c',
-                    red: '#ef4444',
-                    orange: '#f97316',
-                    amber: '#f59e0b',
-                    yellow: '#eab308',
-                    lime: '#84cc16',
-                    green: '#22c55e',
-                    emerald: '#10b981',
-                    teal: '#14b8a6',
-                    cyan: '#06b6d4',
-                    sky: '#0ea5e9',
-                    blue: '#3b82f6',
-                    indigo: '#6366f1',
-                    violet: '#8b5cf6',
-                    purple: '#a855f7',
-                };
-                return colorMap[colorName] || '#9ca3af';
-            }
-            return '#9ca3af'; // default gray
-        });
-
-        const ctx = this.container.querySelector('#stats-expense-donut-chart').getContext('2d');
-        this.charts.expenseDonut = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: colors,
-                    borderWidth: 0,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '75%',
-                plugins: { legend: { display: false }, tooltip: { enabled: false } }
-            }
-        });
-
-        // Custom Legend
-        const legendContainer = this.container.querySelector('#stats-expense-legend');
-        legendContainer.innerHTML = categoryData.map((cat, i) => `
-            <div class="flex items-center justify-between text-sm">
-                <div class="flex items-center gap-2">
-                    <span class="size-3 rounded-full" style="background-color: ${colors[i]};"></span>
-                    <span>${cat.name}</span>
-                </div>
-                <div class="font-medium">
-                    <span>${formatCurrency(cat.value)}</span>
-                    <span class="ml-2 text-xs text-wabi-text-secondary">${((cat.value / totalExpense) * 100).toFixed(0)}%</span>
-                </div>
-            </div>
-        `).join('');
+        return Object.values(groupMap).sort((a, b) => b.value - a.value);
     }
 
-    renderIncomeDonutChart(incomeData) {
-        const container = this.container.querySelector('#stats-income-donut-container');
-        if (this.charts.incomeDonut) this.charts.incomeDonut.destroy();
+    _buildDonutChart(rawData, type, containerId, chartId, legendId, toggleBtnId) {
+        const container = this.container.querySelector(containerId);
+        if (containerId === '#stats-expense-donut-container') {
+            if (this.charts.expenseDonut) this.charts.expenseDonut.destroy();
+        } else {
+            if (this.charts.incomeDonut) this.charts.incomeDonut.destroy();
+        }
 
-        const totalIncome = Object.values(incomeData).reduce((a, b) => a + b, 0);
-        if (totalIncome === 0) {
-            container.innerHTML = `<p class="text-center text-wabi-text-secondary py-8">此期間無收入紀錄</p>`;
+        const toggle = this.container.querySelector(toggleBtnId);
+        if (toggle) {
+            toggle.textContent = this.filters.groupMode ? '依分類顯示' : '依群組顯示';
+            toggle.classList.toggle('bg-wabi-primary/10', this.filters.groupMode);
+            toggle.classList.toggle('text-wabi-primary', this.filters.groupMode);
+        }
+
+        const total = Object.values(rawData).reduce((a, b) => a + b, 0);
+        if (total === 0) {
+            const label = type === 'expense' ? '支出' : '收入';
+            container.innerHTML = `<p class="text-center text-wabi-text-secondary py-8">此期間無${label}紀錄</p>`;
             return;
         }
 
-        container.innerHTML = `
-            <div class="relative flex size-40 items-center justify-center sm:size-48">
-                <canvas id="stats-income-donut-chart"></canvas>
-                <div class="absolute text-center">
-                    <p class="text-xs text-wabi-text-secondary">總收入</p>
-                    <p class="text-lg font-bold text-wabi-primary">${formatCurrency(totalIncome)}</p>
-                </div>
-            </div>
-            <div id="stats-income-legend" class="w-full flex-1 space-y-3"></div>
-        `;
+        let resolvedData;
+        if (this.filters.groupMode && !this._drillDownGroup) {
+            resolvedData = this._aggregateByGroup(
+                Object.keys(rawData).map(id => ({ id, value: rawData[id] })), type
+            );
+        } else {
+            const drillIds = this.filters.groupMode && this._drillDownGroup
+                ? this._getGroupCategoryIds(type, this._drillDownGroup)
+                : null;
+            resolvedData = Object.keys(rawData)
+                .filter(id => !drillIds || drillIds.includes(id))
+                .map(id => {
+                    const category = this.categoryManager.getCategoryById(type, id);
+                    return { id, name: category?.name || '其他', value: rawData[id], color: category?.color || 'bg-gray-400' };
+                }).sort((a, b) => b.value - a.value);
+        }
 
-        const categoryData = Object.keys(incomeData).map(id => {
-            const category = this.categoryManager.getCategoryById('income', id);
-            return {
-                id: id,
-                name: category?.name || '其他',
-                value: incomeData[id],
-                color: category?.color || 'bg-gray-400'
-            };
-        }).sort((a, b) => b.value - a.value);
-
-        const labels = categoryData.map(c => c.name);
-        const values = categoryData.map(c => c.value);
-        const colors = categoryData.map(c => {
-            if (c.color.startsWith('#')) {
-                return c.color; // Already a hex code
-            }
-            const colorClass = c.color;
-            const match = colorClass.match(/bg-(.*)-(\d+)/);
+        const labels = resolvedData.map(d => d.name || d.name);
+        const values = resolvedData.map(d => d.value);
+        const colors = resolvedData.map(d => {
+            const color = d.color;
+            if (color.startsWith('#')) return color;
+            const match = color.match(/bg-(.*)-(\d+)/);
             if (match) {
-                const colorName = match[1];
                 const colorMap = {
                     slate: '#64748b', stone: '#78716c', red: '#ef4444', orange: '#f97316',
                     amber: '#f59e0b', yellow: '#eab308', lime: '#84cc16', green: '#22c55e',
                     emerald: '#10b981', teal: '#14b8a6', cyan: '#06b6d4', sky: '#0ea5e9',
                     blue: '#3b82f6', indigo: '#6366f1', violet: '#8b5cf6', purple: '#a855f7',
                 };
-                return colorMap[colorName] || '#9ca3af';
+                return colorMap[match[1]] || '#9ca3af';
             }
             return '#9ca3af';
         });
 
-        const ctx = this.container.querySelector('#stats-income-donut-chart').getContext('2d');
-        this.charts.incomeDonut = new Chart(ctx, {
+        container.innerHTML = `
+            <div class="relative flex size-40 items-center justify-center sm:size-48">
+                <canvas id="${chartId.replace('#', '')}"></canvas>
+                <div class="absolute text-center">
+                    <p class="text-xs text-wabi-text-secondary">${type === 'expense' ? '總支出' : '總收入'}</p>
+                    <p class="text-lg font-bold text-wabi-primary">${formatCurrency(total)}</p>
+                </div>
+            </div>
+            <div id="${legendId.replace('#', '')}" class="w-full flex-1 space-y-3"></div>
+        `;
+
+        const ctx = this.container.querySelector(chartId).getContext('2d');
+        const chartKey = type === 'expense' ? 'expenseDonut' : 'incomeDonut';
+        this.charts[chartKey] = new Chart(ctx, {
             type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: values,
-                    backgroundColor: colors,
-                    borderWidth: 0,
-                }]
-            },
+            data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 0 }] },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '75%',
-                plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                responsive: true, maintainAspectRatio: false, cutout: '75%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                onClick: this.filters.groupMode && !this._drillDownGroup ? (e, elements) => {
+                    if (elements.length > 0) {
+                        const idx = elements[0].index;
+                        this._drillDownGroup = resolvedData[idx].id;
+                        this._buildDonutChart(rawData, type, containerId, chartId, legendId, toggleBtnId);
+                    }
+                } : undefined
             }
         });
 
-        const legendContainer = this.container.querySelector('#stats-income-legend');
-        legendContainer.innerHTML = categoryData.map((cat, i) => `
-            <div class="flex items-center justify-between text-sm">
+        const legendContainer = this.container.querySelector(legendId);
+        legendContainer.innerHTML = resolvedData.map((d, i) => `
+            <div class="flex items-center justify-between text-sm${this.filters.groupMode && !this._drillDownGroup ? ' cursor-pointer hover:opacity-80' : ''}">
                 <div class="flex items-center gap-2">
                     <span class="size-3 rounded-full" style="background-color: ${colors[i]};"></span>
-                    <span>${cat.name}</span>
+                    <span>${escAttr(d.name || d.name)}</span>
                 </div>
                 <div class="font-medium">
-                    <span>${formatCurrency(cat.value)}</span>
-                    <span class="ml-2 text-xs text-wabi-text-secondary">${((cat.value / totalIncome) * 100).toFixed(0)}%</span>
+                    <span>${formatCurrency(d.value)}</span>
+                    <span class="ml-2 text-xs text-wabi-text-secondary">${((d.value / total) * 100).toFixed(0)}%</span>
                 </div>
             </div>
         `).join('');
+
+        if (this.filters.groupMode && this._drillDownGroup) {
+            const backBtn = document.createElement('button');
+            backBtn.className = 'text-xs text-wabi-primary mt-2 flex items-center gap-1';
+            backBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> 返回群組總覽';
+            backBtn.addEventListener('click', () => {
+                this._drillDownGroup = null;
+                this._buildDonutChart(rawData, type, containerId, chartId, legendId, toggleBtnId);
+            });
+            legendContainer.appendChild(backBtn);
+        }
+
+        if (this.filters.groupMode && !this._drillDownGroup) {
+            legendContainer.querySelectorAll('div.cursor-pointer').forEach(el => {
+                el.addEventListener('click', function() { });
+            });
+            legendContainer.addEventListener('click', (e) => {
+                const item = e.target.closest('.flex.items-center.justify-between');
+                if (item) {
+                    const idx = Array.from(legendContainer.children).indexOf(item);
+                    if (idx >= 0 && idx < resolvedData.length) {
+                        this._drillDownGroup = resolvedData[idx].id;
+                        this._buildDonutChart(rawData, type, containerId, chartId, legendId, toggleBtnId);
+                    }
+                }
+            });
+        }
+    }
+
+    _getGroupCategoryIds(type, groupId) {
+        const grouped = this.categoryManager.getGroupedCategories(type);
+        for (const entry of grouped) {
+            const gid = entry.group.key || entry.group.uuid;
+            if (gid === groupId) {
+                return new Set(entry.categories.map(c => c.id));
+            }
+        }
+        return null;
+    }
+
+    renderExpenseDonutChart(expenseData) {
+        this._buildDonutChart(expenseData, 'expense',
+            '#stats-expense-donut-container', '#stats-expense-donut-chart',
+            '#stats-expense-legend', '#stats-expense-group-toggle');
+    }
+
+    renderIncomeDonutChart(incomeData) {
+        this._buildDonutChart(incomeData, 'income',
+            '#stats-income-donut-container', '#stats-income-donut-chart',
+            '#stats-income-legend', '#stats-income-group-toggle');
     }
 
     getChartTimeUnit(dateRange) {

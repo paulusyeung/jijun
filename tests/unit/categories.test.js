@@ -24,17 +24,27 @@ describe('CATEGORIES', () => {
             }
         }
     });
+
+    it('每個分類都有 groupId', () => {
+        for (const type of ['expense', 'income']) {
+            for (const cat of CATEGORIES[type]) {
+                expect(cat.groupId).toBeDefined();
+                expect(typeof cat.groupId).toBe('string');
+                expect(cat.groupId.length).toBeGreaterThan(0);
+            }
+        }
+    });
 });
 
 describe('getCategoryById', () => {
     it('取得 expense 預設分類', () => {
         const cat = getCategoryById('expense', 'food');
-        expect(cat).toEqual({ id: 'food', name: '飲食', icon: 'fas fa-utensils', color: 'bg-red-500' });
+        expect(cat).toEqual({ id: 'food', name: '飲食', icon: 'fas fa-utensils', color: 'bg-red-500', groupId: 'dining' });
     });
 
     it('取得 income 預設分類', () => {
         const cat = getCategoryById('income', 'salary');
-        expect(cat).toEqual({ id: 'salary', name: '薪水', icon: 'fas fa-money-bill-wave', color: 'bg-green-600' });
+        expect(cat).toEqual({ id: 'salary', name: '薪水', icon: 'fas fa-money-bill-wave', color: 'bg-green-600', groupId: 'salary' });
     });
 
     it('不存在的分類回傳 undefined', () => {

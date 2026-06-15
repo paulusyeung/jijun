@@ -30,6 +30,7 @@ function createMockApp() {
         categoryManager: {
             getAllCategories: vi.fn().mockResolvedValue([]),
             getCategoryById: vi.fn().mockResolvedValue(null),
+            getGroupedCategories: vi.fn().mockResolvedValue([]),
         }
     };
 }
@@ -149,6 +150,18 @@ describe('PluginManager — createPluginContext', () => {
         const ctx = pm.createPluginContext('test-plugin', ['data:read']);
         ctx.data.getRecords();
         expect(ds.getRecords).toHaveBeenCalled();
+    });
+
+    it('getCategories 回傳扁平陣列', () => {
+        const ctx = pm.createPluginContext('test-plugin', ['data:read']);
+        ctx.data.getCategories('expense');
+        expect(app.categoryManager.getAllCategories).toHaveBeenCalledWith('expense');
+    });
+
+    it('getCategoryGroups 回傳分組資料', () => {
+        const ctx = pm.createPluginContext('test-plugin', ['data:read']);
+        ctx.data.getCategoryGroups('expense');
+        expect(app.categoryManager.getGroupedCategories).toHaveBeenCalledWith('expense');
     });
 
     it('有 data:read 但無 data:write 時 addRecord 投擲錯誤', () => {

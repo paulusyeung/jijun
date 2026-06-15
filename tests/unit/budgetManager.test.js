@@ -76,6 +76,7 @@ describe('BudgetManager', () => {
             expect(bm.currentBudget).toBe(0);
             expect(bm.categoryBudgets).toEqual({});
             expect(bm.categoryBudgetOrder).toEqual([]);
+            expect(bm.groupBudgets).toEqual({});
         });
 
         it('持有 dataService 引用', () => {
@@ -96,7 +97,7 @@ describe('BudgetManager', () => {
         it('從 IndexedDB 讀取預算', async () => {
             ds.getSetting.mockResolvedValueOnce({
                 key: 'budget_settings_1',
-                value: { monthlyBudget: 10000, categoryBudgets: { 'food': 3000 }, categoryBudgetOrder: ['food'] },
+                value: { monthlyBudget: 10000, categoryBudgets: { 'food': 3000 }, categoryBudgetOrder: ['food'], groupBudgets: { 'dining': 5000 } },
             });
 
             await bm.loadBudget();
@@ -104,6 +105,7 @@ describe('BudgetManager', () => {
             expect(bm.currentBudget).toBe(10000);
             expect(bm.categoryBudgets).toEqual({ 'food': 3000 });
             expect(bm.categoryBudgetOrder).toEqual(['food']);
+            expect(bm.groupBudgets).toEqual({ 'dining': 5000 });
         });
 
         it('從 localStorage fallback 讀取', async () => {
@@ -152,11 +154,13 @@ describe('BudgetManager', () => {
         it('同時儲存分類預算', async () => {
             const cats = { 'food': 3000, 'transport': 2000 };
             const order = ['food', 'transport'];
-            const result = await bm.saveBudget(10000, cats, order);
+            const groups = { 'dining': 5000 };
+            const result = await bm.saveBudget(10000, cats, order, groups);
 
             expect(result).toBe(true);
             expect(bm.categoryBudgets).toEqual(cats);
             expect(bm.categoryBudgetOrder).toEqual(order);
+            expect(bm.groupBudgets).toEqual(groups);
         });
 
         it('呼叫 dataService.saveSetting 與 logChange', async () => {
@@ -168,6 +172,7 @@ describe('BudgetManager', () => {
                     value: expect.objectContaining({
                         monthlyBudget: 10000,
                         categoryBudgets: { 'food': 3000 },
+                        groupBudgets: {},
                     }),
                 })
             );
@@ -175,7 +180,7 @@ describe('BudgetManager', () => {
         });
 
         it('skipLog=true 時不呼叫 logChange', async () => {
-            await bm.saveBudget(5000, {}, [], true);
+            await bm.saveBudget(5000, {}, [], {}, true);
             expect(ds.logChange).not.toHaveBeenCalled();
         });
 
@@ -190,6 +195,7 @@ describe('BudgetManager', () => {
 
             expect(localStorage.getItem('monthlyBudget_1')).toBe('7000');
             expect(JSON.parse(localStorage.getItem('categoryBudgets_1'))).toEqual({ 'food': 2000 });
+            expect(JSON.parse(localStorage.getItem('groupBudgets_1'))).toEqual({});
         });
     });
 
@@ -264,6 +270,7 @@ describe('BudgetManager', () => {
                         const map = { food: { name: '餐飲', icon: 'fa-utensils' }, transport: { name: '交通', icon: 'fa-car' } };
                         return map[id] || null;
                     }),
+                    getGroupedCategories: vi.fn(() => []),
                 },
             };
 
@@ -288,6 +295,7 @@ describe('BudgetManager', () => {
             window.app = {
                 categoryManager: {
                     getCategoryById: vi.fn(() => ({ name: 'food', icon: '' })),
+                    getGroupedCategories: vi.fn(() => []),
                 },
             };
 
@@ -308,6 +316,7 @@ describe('BudgetManager', () => {
             window.app = {
                 categoryManager: {
                     getCategoryById: vi.fn((_, id) => ({ name: id, icon: '' })),
+                    getGroupedCategories: vi.fn(() => []),
                 },
             };
 
@@ -327,6 +336,7 @@ describe('BudgetManager', () => {
             window.app = {
                 categoryManager: {
                     getCategoryById: vi.fn(() => ({ name: 'x', icon: '' })),
+                    getGroupedCategories: vi.fn(() => []),
                 },
             };
 
