@@ -30,6 +30,8 @@ export async function initI18n() {
     defaultNS: 'common',
     backend: {
       loadPath: '/locales/{{lng}}/{{ns}}.json',
+      enableHttpCache: true,
+      customCache: 'localStorage',
     },
   });
 
@@ -61,11 +63,16 @@ export function t(key, options) {
   return i18next.t(key, options);
 }
 
-export function changeLanguage(lng) {
-  i18next.changeLanguage(lng);
-  localStorage.setItem('i18nextLng', lng);
-  document.documentElement.lang = lng;
-  document.dispatchEvent(new CustomEvent('app:languageChanged'));
+export async function changeLanguage(lng) {
+  try {
+    await i18next.changeLanguage(lng);
+    localStorage.setItem('i18nextLng', lng);
+    document.documentElement.lang = lng;
+    document.dispatchEvent(new CustomEvent('app:languageChanged'));
+  } catch (error) {
+    console.error('Failed to change language:', error);
+    throw error;
+  }
 }
 
 export function getCurrentLanguage() {
