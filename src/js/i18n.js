@@ -65,7 +65,7 @@ export function changeLanguage(lng) {
   i18next.changeLanguage(lng);
   localStorage.setItem('i18nextLng', lng);
   document.documentElement.lang = lng;
-  location.reload();
+  document.dispatchEvent(new CustomEvent('app:languageChanged'));
 }
 
 export function getCurrentLanguage() {

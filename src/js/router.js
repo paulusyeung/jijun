@@ -18,9 +18,22 @@ export class Router {
         document.addEventListener('click', (e) => {
             this.app.pluginManager.triggerHook('onPageClick', e);
         });
+        document.addEventListener('app:languageChanged', () => this.reRender());
 
         // Initial route
         this.handleRouteChange();
+    }
+
+    reRender() {
+        const scrollY = window.scrollY;
+        document.querySelectorAll('.fixed.inset-0, [id$="-modal"], [id$="-popup"]').forEach(el => {
+            if (el && el.parentNode) el.remove();
+        });
+        const page = this.routes[this.currentPageName];
+        if (page && page.render) {
+            page.render(this.currentParams);
+        }
+        requestAnimationFrame(() => window.scrollTo(0, scrollY));
     }
 
     async handleRouteChange() {
@@ -31,6 +44,8 @@ export class Router {
 
         const [pageName, query] = hash.substring(1).split('?');
         const params = new URLSearchParams(query);
+        this.currentPageName = pageName;
+        this.currentParams = params;
 
         this.updateActiveNavItem(pageName);
 
