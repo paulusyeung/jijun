@@ -1,5 +1,6 @@
 // 預算管理模組
 import { formatCurrency, getDateRange, showToast, escapeHTML } from './utils.js'
+import { t } from './i18n.js'
 import Sortable from 'sortablejs'
 
 export class BudgetManager {
@@ -181,9 +182,9 @@ export class BudgetManager {
       return `
         <div class="bg-wabi-surface p-4 rounded-lg shadow-sm border border-wabi-border mb-6">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="text-lg font-semibold text-wabi-primary">本月預算</h3>
+            <h3 class="text-lg font-semibold text-wabi-primary">${t('home:budget.title')}</h3>
             <button id="edit-budget-btn" class="text-wabi-accent hover:underline text-sm">
-              ${status.budget > 0 ? '編輯' : '設定'}
+              ${status.budget > 0 ? t('home:budget.edit') : t('home:budget.set')}
             </button>
           </div>
           
@@ -191,7 +192,7 @@ export class BudgetManager {
             <div class="budget-wave-container">
               <div class="budget-wave" style="top: ${waterLevel}%;"></div>
               <div class="budget-info">
-                  <div class="text-wabi-text-secondary text-sm">${isOverBudget ? '超出預算' : '剩餘預算'}</div>
+                  <div class="text-wabi-text-secondary text-sm">${isOverBudget ? t('home:budget.overBudget') : t('home:budget.remaining')}</div>
                   <div class="font-bold text-3xl ${isOverBudget ? 'text-wabi-expense' : 'text-wabi-primary'}">
                     ${isOverBudget ? '-' : ''}${formatCurrency(Math.abs(status.remaining))}
                   </div>
@@ -200,13 +201,13 @@ export class BudgetManager {
             </div>
             ${isOverBudget ? `
               <div class="mt-3 p-2 bg-wabi-expense/10 border border-wabi-expense/20 rounded text-center">
-                <span class="text-wabi-expense text-sm">⚠️ 已超出全局預算 ${formatCurrency(status.spent - status.budget)}</span>
+                <span class="text-wabi-expense text-sm">${t('home:budget.exceededWarning', { amount: formatCurrency(status.spent - status.budget) })}</span>
               </div>
             ` : ''}
             
             ${status.categoryStatuses && status.categoryStatuses.length > 0 ? `
               <div class="mt-4 pt-3 border-t border-wabi-border/50">
-                <div class="text-sm font-medium text-wabi-text-secondary mb-2">分類預算</div>
+                <div class="text-sm font-medium text-wabi-text-secondary mb-2">${t('home:budget.categoryBudgets')}</div>
                 <div class="space-y-3">
                   ${status.categoryStatuses.map(catStat => `
                     <div class="category-budget-item">
@@ -231,7 +232,7 @@ export class BudgetManager {
             ` : ''}
             ${status.groupStatuses && status.groupStatuses.length > 0 ? `
               <div class="mt-4 pt-3 border-t border-wabi-border/50">
-                <div class="text-sm font-medium text-wabi-text-secondary mb-2">群組預算</div>
+                <div class="text-sm font-medium text-wabi-text-secondary mb-2">${t('home:budget.groupBudgets')}</div>
                 <div class="space-y-3">
                   ${status.groupStatuses.map(gs => `
                     <div class="category-budget-item">
@@ -257,9 +258,9 @@ export class BudgetManager {
           ` : `
             <div class="text-center py-8">
               <div class="text-4xl mb-3">💰</div>
-              <p class="text-wabi-text-secondary mb-4">設定每月預算來追蹤支出</p>
+              <p class="text-wabi-text-secondary mb-4">${t('home:budget.noBudgetMessage')}</p>
               <button id="set-budget-btn" class="bg-wabi-accent hover:bg-wabi-accent/90 text-wabi-primary font-bold px-6 py-2 rounded-lg transition-colors">
-                設定預算
+                ${t('home:budget.setBudget')}
               </button>
             </div>
           `}
@@ -276,7 +277,7 @@ export class BudgetManager {
     modal.id = 'budget-modal'
     modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4'
     
-    let categoryOptions = '<option value="" disabled selected>選擇分類...</option>';
+    let categoryOptions = `<option value="" disabled selected>${t('home:budget.selectCategory')}</option>`;
     if (window.app && window.app.categoryManager) {
       const expenseCategories = window.app.categoryManager.getAllCategories('expense');
       categoryOptions += expenseCategories.map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('');
@@ -284,20 +285,20 @@ export class BudgetManager {
 
     modal.innerHTML = `
       <div class="bg-wabi-bg rounded-lg max-w-md w-full p-6 max-h-[90vh] overflow-y-auto wabi-scrollbar">
-        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">設定每月預算</h3>
+        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">${t('home:budget.modalTitle')}</h3>
         
         <div class="mb-5">
-          <label class="block text-sm font-medium text-wabi-text-primary mb-2">全局預算金額</label>
+          <label class="block text-sm font-medium text-wabi-text-primary mb-2">${t('home:budget.globalLabel')}</label>
           <input type="number" id="budget-input" step="100" min="0" 
                  value="${this.currentBudget}" 
-                 placeholder="輸入每月預算..."
+                 placeholder="${t('home:budget.inputPlaceholder')}"
                  class="w-full p-3 bg-transparent border border-wabi-border rounded-lg focus:ring-2 focus:ring-wabi-accent focus:border-transparent text-wabi-text-primary">
-          <p class="text-xs text-wabi-text-secondary mt-1">💡 建議設定合理的月支出預算，幫助您控制開銷</p>
-          <p id="budget-warning-msg" class="text-xs text-wabi-expense mt-2 hidden">⚠️ 分類預算總和已超過全局預算！</p>
+          <p class="text-xs text-wabi-text-secondary mt-1">${t('home:budget.inputHint')}</p>
+          <p id="budget-warning-msg" class="text-xs text-wabi-expense mt-2 hidden">${t('home:budget.warningExceed')}</p>
         </div>
 
         <div class="mb-6 pt-4 border-t border-wabi-border">
-          <label class="block text-sm font-medium text-wabi-text-primary mb-2">群組預算 (選填)</label>
+          <label class="block text-sm font-medium text-wabi-text-primary mb-2">${t('home:budget.groupLabel')}</label>
           <div id="group-budgets-list" class="space-y-2 mb-3">
             <!-- 群組預算會動態生成於此 -->
           </div>
@@ -305,9 +306,9 @@ export class BudgetManager {
 
         <div class="mb-6 pt-4 border-t border-wabi-border">
           <div class="flex justify-between items-center mb-2">
-            <label class="block text-sm font-medium text-wabi-text-primary">分類預算 (選填)</label>
+            <label class="block text-sm font-medium text-wabi-text-primary">${t('home:budget.categoryLabel')}</label>
             <button id="add-category-budget-btn" class="text-xs text-wabi-accent hover:underline flex items-center gap-1">
-              <i class="fas fa-plus"></i> 新增分類預算
+              <i class="fas fa-plus"></i> ${t('home:budget.addCategory')}
             </button>
           </div>
           
@@ -318,10 +319,10 @@ export class BudgetManager {
         
         <div class="flex space-x-3 mt-6">
           <button id="save-budget-btn" class="flex-1 bg-wabi-accent hover:bg-wabi-accent/90 text-wabi-primary font-bold py-3 rounded-lg transition-colors">
-            儲存
+            ${t('common:buttons.save')}
           </button>
           <button id="cancel-budget-btn" class="px-6 bg-wabi-border hover:bg-wabi-border text-wabi-text-primary py-3 rounded-lg transition-colors">
-            取消
+            ${t('common:buttons.cancel')}
           </button>
         </div>
       </div>
@@ -338,7 +339,7 @@ export class BudgetManager {
     const renderCategoryBudgetList = () => {
       categoryBudgetsList.innerHTML = '';
       if (Object.keys(workingCategoryBudgets).length === 0) {
-        categoryBudgetsList.innerHTML = '<div class="text-center text-sm text-wabi-text-secondary py-2">無設定分類預算</div>';
+        categoryBudgetsList.innerHTML = `<div class="text-center text-sm text-wabi-text-secondary py-2">${t('home:budget.noCategoryBudgets')}</div>`;
         if (sortableInstance) { sortableInstance.destroy(); sortableInstance = null; }
         return;
       }
@@ -532,9 +533,9 @@ export class BudgetManager {
         }
 
         if (totalCategoryBudget > amount && amount > 0) {
-          showToast('注意：分類預算總和已超過全局預算！', 'warning')
+          showToast(t('home:budget.toastWarning'), 'warning')
         } else {
-          showToast('預算設定已儲存', 'success')
+          showToast(t('home:budget.toastSaved'), 'success')
         }
 
         await this.saveBudget(amount, workingCategoryBudgets, workingCategoryBudgetOrder, workingGroupBudgets)

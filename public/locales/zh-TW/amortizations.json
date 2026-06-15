@@ -1,0 +1,35 @@
+{
+  "installment": "分期付款",
+  "depreciation": "折舊",
+  "amortization": "攤提",
+  "monthly": "每月",
+  "weekly": "每週",
+  "yearly": "每年",
+  "types": {
+    "installment": "分期付款",
+    "depreciation": "折舊",
+    "amortization": "攤提"
+  },
+  "statuses": {
+    "active": "進行中",
+    "paused": "已暫停",
+    "completed": "已完成"
+  },
+  "title": "攤提/分期管理",
+  "infoText": "管理分期付款、資產折舊、費用攤提，系統會依設定自動記帳。",
+  "empty": "尚無攤提/分期項目",
+  "overpaid": "已溢繳",
+  "uncategorized": "未分類",
+  "interestRate": "利率 {{rate}}%",
+  "progress": "已完成 {{completed}}/{{periods}} 期",
+  "perPeriod": "每期 ${{amount}}",
+  "totalAmount": "總額",
+  "downPayment": "首付",
+  "nextDue": "下期",
+  "pause": "暫停",
+  "resume": "恢復",
+  "paused": "已暫停",
+  "resumed": "已恢復",
+  "deleted": "已刪除",
+  "confirmDeleteMessage": "確定要刪除「{{name}}」嗎？\n\n⚠️ 已產生的記帳紀錄不會被刪除。"
+}

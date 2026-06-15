@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { showToast, customConfirm } from '../utils.js';
 import { DARK_THEME_ID } from '../themeManager.js';
 
@@ -34,7 +35,7 @@ export class ThemesPage {
                     <a href="#settings" class="text-wabi-text-secondary hover:text-wabi-primary">
                         <i class="fa-solid fa-chevron-left text-xl"></i>
                     </a>
-                    <h1 class="text-xl font-bold text-wabi-primary">外觀主題</h1>
+                    <h1 class="text-xl font-bold text-wabi-primary">${t('plugins:themes_title')}</h1>
                     <a href="#theme-store" class="text-wabi-primary hover:text-wabi-primary/80">
                         <i class="fa-solid fa-store text-xl"></i>
                     </a>
@@ -48,8 +49,8 @@ export class ThemesPage {
                                 <i class="fa-solid fa-palette text-gray-400 text-xl"></i>
                             </div>
                             <div>
-                                <h4 class="font-bold text-wabi-text-primary">預設主題</h4>
-                                <p class="text-xs text-wabi-text-secondary mt-1">系統預設配色與圖標</p>
+<h4 class="font-bold text-wabi-text-primary">${t('plugins:default_theme')}</h4>
+                                 <p class="text-xs text-wabi-text-secondary mt-1">${t('plugins:default_theme_desc')}</p>
                             </div>
                         </div>
                         ${!activeThemeId ? '<i class="fa-solid fa-circle-check text-wabi-primary text-xl"></i>' : ''}
@@ -58,8 +59,8 @@ export class ThemesPage {
                     <!-- Installed Themes -->
                     ${themes.length === 0 ? `
                         <div class="text-center py-8 text-wabi-text-secondary">
-                            <p>尚未安裝任何自訂主題</p>
-                            <a href="#theme-store" class="text-wabi-primary mt-2 inline-block font-medium">前往商店下載</a>
+<p>${t('plugins:no_themes')}</p>
+                             <a href="#theme-store" class="text-wabi-primary mt-2 inline-block font-medium">${t('plugins:go_to_store')}</a>
                         </div>
                     ` : themes.map(t => {
                         const updatable = hasUpdate(t);
@@ -74,24 +75,24 @@ export class ThemesPage {
                                     <div class="flex items-center gap-2 flex-wrap">
                                         <h4 class="font-bold text-wabi-text-primary group-hover:text-wabi-primary transition-colors">${t.name}</h4>
                                         ${updatable
-                                            ? `<span class="text-xs bg-yellow-400/20 text-yellow-600 border border-yellow-400/40 px-1.5 py-0.5 rounded-full font-medium shrink-0">v${store.version} 可更新</span>`
+                                            ? `<span class="text-xs bg-yellow-400/20 text-yellow-600 border border-yellow-400/40 px-1.5 py-0.5 rounded-full font-medium shrink-0">${t('plugins:update_available', { version: store.version })}</span>`
                                             : `<span class="text-xs text-wabi-text-secondary shrink-0">v${t.version || '?'}</span>`
                                         }
                                     </div>
-                                    <p class="text-xs text-wabi-text-secondary mt-0.5 truncate">${t.description || '無描述'}</p>
+                                    <p class="text-xs text-wabi-text-secondary mt-0.5 truncate">${t.description || t('plugins:no_description')}</p>
                                 </div>
                             </div>
                             <div class="flex items-center gap-2 z-10 shrink-0 ml-2">
                                 ${activeThemeId === t.id ? '<i class="fa-solid fa-circle-check text-wabi-primary text-xl"></i>' : ''}
                                 ${updatable
-                                    ? `<button class="update-theme-btn text-xs font-bold px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-lg transition-colors shrink-0" data-id="${t.id}" data-url="${store.file}" title="更新至 v${store.version}">
-                                           <i class="fa-solid fa-arrow-up-from-bracket mr-1"></i>更新
-                                       </button>`
+                                    ? `<button class="update-theme-btn text-xs font-bold px-3 py-1.5 bg-yellow-400 hover:bg-yellow-500 text-yellow-900 rounded-lg transition-colors shrink-0" data-id="${t.id}" data-url="${store.file}" title="${t('plugins:update_version', { version: store.version })}">
+                                            <i class="fa-solid fa-arrow-up-from-bracket mr-1"></i>${t('plugins:update')}
+                                        </button>`
                                     : ''
                                 }
                                 ${t.id === DARK_THEME_ID
-                                    ? '<span class="text-wabi-text-secondary p-2 text-sm" title="內建主題不可刪除"><i class="fa-solid fa-lock"></i></span>'
-                                    : `<button class="delete-theme-btn text-wabi-expense p-2 transition-opacity" data-id="${t.id}" title="刪除主題"><i class="fa-solid fa-trash-can"></i></button>`
+                                    ? `<span class="text-wabi-text-secondary p-2 text-sm" title="${t('plugins:builtin_theme_note')}"><i class="fa-solid fa-lock"></i></span>`
+                                    : `<button class="delete-theme-btn text-wabi-expense p-2 transition-opacity" data-id="${t.id}" title="${t('plugins:delete_theme')}"><i class="fa-solid fa-trash-can"></i></button>`
                                 }
                             </div>
                         </div>
@@ -126,7 +127,7 @@ export class ThemesPage {
                 e.stopPropagation();
                 const originalHtml = btn.innerHTML;
                 btn.disabled = true;
-                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>更新中';
+                btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i>${t('plugins:updating')}`;
                 try {
                     const response = await fetch(btn.dataset.url);
                     if (!response.ok) throw new Error('fetch failed');
@@ -139,10 +140,10 @@ export class ThemesPage {
                         await this.app.themeManager.applyTheme(themeData);
                     }
 
-                    showToast('主題已更新！', 'success');
+                    showToast(t('plugins:theme_updated'), 'success');
                     this.render();
                 } catch (_) {
-                    showToast('更新失敗，請稍後再試', 'error');
+                    showToast(t('plugins:update_failed'), 'error');
                     btn.disabled = false;
                     btn.innerHTML = originalHtml;
                 }
@@ -154,13 +155,13 @@ export class ThemesPage {
             btn.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 const id = btn.dataset.id;
-                if (await customConfirm('確定要移除此主題嗎？')) {
+                if (await customConfirm(t('plugins:confirm_delete_theme'))) {
                     const activeSetting = await this.app.dataService.getSetting('activeThemeId');
                     if (activeSetting && activeSetting.value === id) {
                         await this.app.themeManager.clearTheme();
                     }
                     await this.app.dataService.uninstallTheme(id);
-                    showToast('主題已移除');
+                    showToast(t('plugins:theme_deleted'));
                     this.render();
                 }
             });

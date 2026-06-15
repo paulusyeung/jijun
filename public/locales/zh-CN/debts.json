@@ -1,0 +1,125 @@
+{
+  "receivable": "别人欠我",
+  "payable": "我欠别人",
+  "settled": "已还清",
+  "unsettled": "未结清",
+  "selectContact": "选择联络人...",
+  "unknownContact": "未知联络人",
+  "contactLabel": "联络人：",
+  "typeLabel": "类型：",
+  "originalAmountLabel": "原始金额：",
+  "pageTitle": "欠款管理",
+  "summaryTable": "联络人欠款总表",
+  "contactsLink": "联络人管理",
+  "contactFilterAll": "👤 所有联络人",
+  "summary": {
+    "theyOweMe": "别人欠我",
+    "iOweThem": "我欠别人",
+    "contactOwesMe": "{{name}} 欠我",
+    "iOweContact": "我欠 {{name}}"
+  },
+  "table": {
+    "contact": "联络人",
+    "theyOweMe": "欠我",
+    "iOwe": "我欠",
+    "net": "净额",
+    "clickToFilter": "点击任一行可筛选该联络人的欠款",
+    "noUnsettled": "目前没有未结清的欠款"
+  },
+  "badge": {
+    "theyOweMe": "欠我",
+    "iOwe": "我欠"
+  },
+  "progress": {
+    "received": "已收款",
+    "repaid": "已还款"
+  },
+  "history": {
+    "view": "查看还款历程 ({{count}} 笔)",
+    "titleReceivable": "收款历程",
+    "titlePayable": "还款历程",
+    "noPayments": "尚无还款记录",
+    "originalAmount": "原始金额",
+    "totalReceived": "已收款",
+    "totalRepaid": "已还款",
+    "remaining": "剩余金额"
+  },
+  "filter": {
+    "settled": "已还清"
+  },
+  "button": {
+    "settleFullReceivable": "全额收款",
+    "settleFullPayable": "全额还款",
+    "partial": "部分",
+    "copy": "复制",
+    "fullSettle": "全额结清"
+  },
+  "label": {
+    "settledOn": "已于 {{date}} 结清",
+    "noNote": "无备注",
+    "remaining": "剩余金额：",
+    "remainingAmount": "剩余金额"
+  },
+  "pagination": {
+    "prev": "上一页",
+    "next": "下一页"
+  },
+  "confirm": {
+    "settleFull": "确定要标记此欠款为全额结清吗？系统将自动产生对应的收支记录。",
+    "deleteDebt": "确定要删除此欠款记录吗？",
+    "deleteRelatedRecord": "此欠款有关联的记帐纪录，是否也要一并删除该纪录？",
+    "deleteContact": "确定要删除此联络人吗？"
+  },
+  "toast": {
+    "settled": "已结清欠款并产生记帐纪录",
+    "deletedWithRecord": "欠款与关联纪录已删除",
+    "deleted": "已删除欠款纪录",
+    "updated": "已更新欠款纪录",
+    "added": "已新增欠款纪录"
+  },
+  "partialPayment": {
+    "titleReceivable": "部分收款",
+    "titlePayable": "部分还款",
+    "amountLabelReceivable": "收款金额",
+    "amountLabelPayable": "还款金额",
+    "enterAmount": "输入金额",
+    "invalidAmount": "请输入有效金额",
+    "exceedsRemaining": "金额不能超过剩余金额 {{amount}}"
+  },
+  "addDebt": {
+    "titleEdit": "编辑欠款",
+    "titleAdd": "新增欠款记录",
+    "typeReceivable": "别人欠我",
+    "typePayable": "我欠别人",
+    "descriptionPlaceholder": "例如：午餐代垫",
+    "noContacts": "请先新增联络人",
+    "requiredFields": "请填写完整资料"
+  },
+  "reminder": {
+    "title": "提醒讯息",
+    "shareTitle": "欠款提醒",
+    "copied": "讯息已复制到剪贴簿！",
+    "copiedFallback": "讯息已复制！",
+    "shareFailed": "分享失败，请使用复制功能",
+    "shareNotSupported": "您的浏览器不支援分享功能，讯息已复制到剪贴簿！",
+    "shareFallbackFailed": "分享功能不支援，请使用复制功能",
+    "messageReceivable": "嗨 {{name}}，提醒一下之前{{date}}{{description}}的 {{amount}} 还没收到喔！方便的话再麻烦你转给我，谢谢！",
+    "messagePayable": "嗨 {{name}}，我还欠你{{date}}{{description}} {{amount}}，我会尽快还你的！"
+  },
+  "contacts": {
+    "pageTitle": "联络人管理",
+    "empty": "尚未新增任何联络人",
+    "hasDebts": "此联络人尚有关联的欠款记录，无法删除。",
+    "modalTitleEdit": "编辑联络人",
+    "modalTitleAdd": "新增联络人",
+    "uploadHint": "点击上传头像",
+    "namePlaceholder": "输入联络人名称",
+    "nameRequired": "请输入联络人名称"
+  },
+  "defaultContactName": "朋友",
+  "placeholderContact": "联络人",
+  "empty": {
+    "listFiltered": "目前没有{{filter}}欠款记录",
+    "listAll": "目前没有欠款记录"
+  }
+}

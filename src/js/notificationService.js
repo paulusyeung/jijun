@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import DataService from './dataService.js';
 
 export class NotificationService {
@@ -19,8 +20,8 @@ export class NotificationService {
             // Create channel for Android 8.0+
             await LocalNotifications.createChannel({
                 id: this.channelId,
-                name: '記帳提醒',
-                description: '每日定時記帳提醒',
+                name: t('common:notification.title'),
+                description: t('common:notification.description'),
                 importance: 4, // High importance
                 visibility: 1, // Public
             });
@@ -66,7 +67,7 @@ export class NotificationService {
       }
     } else {
       if (!('Notification' in window)) {
-        console.warn('此瀏覽器不支援網頁推播通知');
+        console.warn(t('common:notification.unsupported'));
         return false;
       }
       const permission = await Notification.requestPermission();
@@ -122,8 +123,8 @@ export class NotificationService {
     }
     
     const notificationId = 1001;
-    const title = '記帳提醒';
-    const body = '今天還記得記帳嗎？點擊馬上紀錄！';
+    const title = t('common:notification.title');
+    const body = t('common:notification.body');
 
     if (this.isNative) {
         try {

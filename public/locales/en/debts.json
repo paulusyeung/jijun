@@ -1,0 +1,125 @@
+{
+  "receivable": "Others owe me",
+  "payable": "I owe others",
+  "settled": "Settled",
+  "unsettled": "Unsettled",
+  "selectContact": "Select contact...",
+  "unknownContact": "Unknown contact",
+  "contactLabel": "Contact: ",
+  "typeLabel": "Type: ",
+  "originalAmountLabel": "Original Amount: ",
+  "pageTitle": "Debt Management",
+  "summaryTable": "Contact Summary Table",
+  "contactsLink": "Contact Management",
+  "contactFilterAll": "👤 All Contacts",
+  "summary": {
+    "theyOweMe": "Others owe me",
+    "iOweThem": "I owe others",
+    "contactOwesMe": "{{name}} owes me",
+    "iOweContact": "I owe {{name}}"
+  },
+  "table": {
+    "contact": "Contact",
+    "theyOweMe": "They Owe Me",
+    "iOwe": "I Owe",
+    "net": "Net",
+    "clickToFilter": "Click a row to filter debts by this contact",
+    "noUnsettled": "No unsettled debts at the moment"
+  },
+  "badge": {
+    "theyOweMe": "owes me",
+    "iOwe": "I owe"
+  },
+  "progress": {
+    "received": "Received",
+    "repaid": "Repaid"
+  },
+  "history": {
+    "view": "View payment history ({{count}} records)",
+    "titleReceivable": "Payment History (Received)",
+    "titlePayable": "Payment History (Repaid)",
+    "noPayments": "No payment records yet",
+    "originalAmount": "Original Amount",
+    "totalReceived": "Total Received",
+    "totalRepaid": "Total Repaid",
+    "remaining": "Remaining Amount"
+  },
+  "filter": {
+    "settled": "Settled"
+  },
+  "button": {
+    "settleFullReceivable": "Collect Full Amount",
+    "settleFullPayable": "Pay in Full",
+    "partial": "Partial",
+    "copy": "Copy",
+    "fullSettle": "Full Settlement"
+  },
+  "label": {
+    "settledOn": "Settled on {{date}}",
+    "noNote": "No notes",
+    "remaining": "Remaining: ",
+    "remainingAmount": "Remaining Amount"
+  },
+  "pagination": {
+    "prev": "Previous",
+    "next": "Next"
+  },
+  "confirm": {
+    "settleFull": "Are you sure you want to mark this debt as fully settled? A corresponding income/expense record will be automatically created.",
+    "deleteDebt": "Are you sure you want to delete this debt record?",
+    "deleteRelatedRecord": "This debt has an associated record. Do you also want to delete that record?",
+    "deleteContact": "Are you sure you want to delete this contact?"
+  },
+  "toast": {
+    "settled": "Debt settled, record created",
+    "deletedWithRecord": "Debt and associated record deleted",
+    "deleted": "Debt record deleted",
+    "updated": "Debt record updated",
+    "added": "Debt record added"
+  },
+  "partialPayment": {
+    "titleReceivable": "Partial Collection",
+    "titlePayable": "Partial Payment",
+    "amountLabelReceivable": "Collection Amount",
+    "amountLabelPayable": "Payment Amount",
+    "enterAmount": "Enter amount",
+    "invalidAmount": "Please enter a valid amount",
+    "exceedsRemaining": "Amount cannot exceed remaining {{amount}}"
+  },
+  "addDebt": {
+    "titleEdit": "Edit Debt",
+    "titleAdd": "Add Debt Record",
+    "typeReceivable": "Others owe me",
+    "typePayable": "I owe others",
+    "descriptionPlaceholder": "e.g. Lunch advance",
+    "noContacts": "Please add a contact first",
+    "requiredFields": "Please fill in all required fields"
+  },
+  "reminder": {
+    "title": "Reminder Message",
+    "shareTitle": "Debt Reminder",
+    "copied": "Message copied to clipboard!",
+    "copiedFallback": "Message copied!",
+    "shareFailed": "Share failed, please use copy instead",
+    "shareNotSupported": "Your browser does not support sharing. Message copied to clipboard!",
+    "shareFallbackFailed": "Share not supported, please use copy",
+    "messageReceivable": "Hi {{name}}, just a reminder about the {{amount}} from {{date}}{{description}} that hasn't been received yet! Please transfer it to me when convenient, thank you!",
+    "messagePayable": "Hi {{name}}, I still owe you {{amount}} from {{date}}{{description}}. I'll pay you back as soon as possible!"
+  },
+  "contacts": {
+    "pageTitle": "Contact Management",
+    "empty": "No contacts added yet",
+    "hasDebts": "This contact has associated debt records and cannot be deleted.",
+    "modalTitleEdit": "Edit Contact",
+    "modalTitleAdd": "Add Contact",
+    "uploadHint": "Click to upload avatar",
+    "namePlaceholder": "Enter contact name",
+    "nameRequired": "Please enter a contact name"
+  },
+  "defaultContactName": "Friend",
+  "placeholderContact": "Contact",
+  "empty": {
+    "listFiltered": "No {{filter}} debt records",
+    "listAll": "No debt records"
+  }
+}

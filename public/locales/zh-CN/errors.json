@@ -1,0 +1,22 @@
+{
+  "generic": "发生错误",
+  "network": "网路错误，请稍后再试",
+  "validation": {
+    "required": "此栏位为必填",
+    "invalidAmount": "请输入有效金额",
+    "invalidDate": "请输入有效日期",
+    "maxLength": "最多 {{max}} 个字元"
+  },
+  "db": {
+    "read": "读取资料失败",
+    "write": "储存资料失败",
+    "delete": "删除资料失败"
+  },
+  "sync": {
+    "failed": "同步失败",
+    "conflict": "侦测到资料冲突",
+    "offline": "无网路连线"
+  },
+  "pageLoadFailed": "页面载入失败",
+  "pageLoadError": "页面载入发生错误"
+}

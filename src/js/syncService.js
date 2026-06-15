@@ -6,6 +6,7 @@
  */
 
 // showToast 暫存以便未來使用（目前未使用）
+import { t } from './i18n.js';
 // eslint-disable-next-line no-unused-vars
 import { showToast, deriveDeviceKey, encryptData, decryptData, bufferToBase64URL, base64URLToBuffer } from './utils.js';
 
@@ -243,7 +244,7 @@ export class SyncService {
       }
 
       if (!result.serverAuthCode) {
-        throw new Error('未取得 serverAuthCode (請確認 Google Cloud Console 設定了正確的 Web Client ID 且 forceCodeForRefreshToken為true)');
+        throw new Error(t('sync:auth_code_missing'));
       }
 
       await this.handleAuthCallback(result.serverAuthCode);
@@ -253,7 +254,7 @@ export class SyncService {
       return true;
     } catch (e) {
       console.error('[SyncService] Native signIn error:', e);
-      throw new Error('原生 Google 登入失敗: ' + (e.message || JSON.stringify(e)));
+      throw new Error(t('sync:native_login_failed', { message: e.message || JSON.stringify(e) }));
     }
   }
 
@@ -264,7 +265,7 @@ export class SyncService {
   async _signInWeb(requestSharing = false) {
     return new Promise((resolve, reject) => {
       if (!window.google?.accounts?.oauth2) {
-        reject(new Error('Google Identity Services SDK 尚未載入 (WebView 中不支援此方式)'));
+        reject(new Error(t('sync:gis_not_loaded')));
         return;
       }
 
@@ -473,16 +474,16 @@ export class SyncService {
     // 彈出確認提示，讓使用者知道為何要進行二次授權
     const confirm = await import('./utils.js').then(m => m.customConfirm);
     const proceeds = await confirm(
-      '【共用功能授權提示】\n\n此操作需要額外的 Google Drive 讀寫權限（存取此應用程式建立的共享檔案）。\n\n我們將為您發起二次授權，請在隨後出現的 Google 登入視窗中，勾選並同意「查看及編輯使用此 App 建立的特定檔案」權限。'
+      t('sync:sharing_auth_prompt_title') + '\n\n' + t('sync:sharing_auth_prompt_body')
     );
     if (!proceeds) {
-      throw new Error('使用者取消了權限請求，無法執行此操作。');
+      throw new Error(t('sync:sharing_auth_cancelled'));
     }
 
     // 發起帶有共享 scopes 的登入
     const success = await this.signIn(true);
     if (!success) {
-      throw new Error('共享權限授權失敗');
+      throw new Error(t('sync:sharing_auth_failed'));
     }
     return true;
   }
@@ -1269,7 +1270,7 @@ export class SyncService {
       }
     );
     if (!res.ok && res.status !== 404) {
-      throw new Error(`刪除檔案失敗 (${res.status})`);
+      throw new Error(t('sync:delete_file_failed', { status: res.status }));
     }
   }
 
@@ -1551,7 +1552,7 @@ export class SyncService {
       let matched = ledgers.find(l => l.uuid === data.ledgerUuid);
 
       // If no exact UUID match, but the data indicates it belongs to the default ledger
-      if (!matched && (data.ledgerId === 1 || data.ledgerName === '預設帳本')) {
+      if (!matched && (data.ledgerId === 1 || data.ledgerName === t('sync:default_ledger'))) {
          matched = ledgers.find(l => l.id === 1);
       }
 
@@ -1688,7 +1689,7 @@ export class SyncService {
 
     // 針對預設帳本 (id: 1) 的特殊處理：不同裝置初始化時預設帳本會有不同的 UUID，
     // 若同步時發現來源為預設帳本，且本地也有預設帳本，則應合併（更新）而非新增，避免產生多個預設帳本
-    if (storeName === 'ledgers' && (data.id === 1 || data.name === '預設帳本')) {
+    if (storeName === 'ledgers' && (data.id === 1 || data.name === t('sync:default_ledger'))) {
         const localDefaultLedger = await this.dataService.getLedger(1);
         if (localDefaultLedger) {
             await this._applyUpdateWithId(storeName, 1, data);
@@ -1819,7 +1820,7 @@ export class SyncService {
             return;
         } else {
             // 針對預設帳本 (id: 1) 的特殊處理
-            if (storeName === 'ledgers' && (data.id === 1 || data.name === '預設帳本')) {
+            if (storeName === 'ledgers' && (data.id === 1 || data.name === t('sync:default_ledger'))) {
                 const localDefaultLedger = await this.dataService.getLedger(1);
                 if (localDefaultLedger) {
                     await this._applyUpdateWithId(storeName, 1, data);
@@ -1969,7 +1970,7 @@ export class SyncService {
   async openSharedLedgerPicker(fileIds = null) {
     await this.ensureSharingPermission();
     if (typeof gapi === 'undefined') {
-      throw new Error('Google API 未載入');
+      throw new Error(t('sync:api_not_loaded'));
     }
 
     return new Promise((resolve, reject) => {
@@ -1980,14 +1981,14 @@ export class SyncService {
 
           const builder = new google.picker.PickerBuilder()
             .addView(view)
-            .setTitle(fileIds ? '請同意授權存取此共用帳本' : '在「與我共用」尋找共用帳本 (EasyAccounting_Shared 開頭)')
+            .setTitle(fileIds ? t('sync:picker_title_with_ids') : t('sync:picker_title_without_ids'))
             .setOAuthToken(this.accessToken)
             .setCallback((data) => {
               if (data.action === google.picker.Action.PICKED) {
                 const file = data.docs[0];
                 resolve(file.id);
               } else if (data.action === google.picker.Action.CANCEL) {
-                reject(new Error('使用者取消選擇'));
+                reject(new Error(t('sync:picker_cancelled')));
               }
             });
 

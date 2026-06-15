@@ -13,6 +13,7 @@ import { NotificationService } from './notificationService.js';
 import { ThemeManager } from './themeManager.js';
 import { Router } from './router.js';
 import { escapeHTML } from './utils.js';
+import { t, initI18n } from './i18n.js';
 
 import { HomePage } from './pages/homePage.js';
 import { AddPage } from './pages/addPage.js';
@@ -72,6 +73,7 @@ class EasyAccountingApp {
     }
 
     async init() {
+        await initI18n();
         await this.dataService.init();
         await this.themeManager.init(); // Initialize themes early
         await this.categoryManager.init();
@@ -131,7 +133,7 @@ class EasyAccountingApp {
         const sidebarVersionInfo = document.getElementById('sidebar-version-info');
         if (sidebarVersionInfo) {
             const latestVersion = this.changelogManager.getAllVersions()[0];
-            sidebarVersionInfo.textContent = `版本 v${latestVersion.version}`;
+            sidebarVersionInfo.textContent = t('common:sidebar.version', { version: latestVersion.version });
         }
 
         // Register Routes
@@ -206,7 +208,7 @@ class EasyAccountingApp {
                     await this.dataService.updateRecurringTransaction(tx.id, { nextDueDate });
                 }
             } catch (error) {
-                console.error(`處理週期交易「${tx.description || '(無名稱)'}」失敗，跳過並繼續:`, error);
+                console.error(`處理週期交易「${tx.description || t('common:recurring.noName')}」失敗，跳過並繼續:`, error);
             }
         }
     }
@@ -256,7 +258,7 @@ class EasyAccountingApp {
                             type: item.recordType || 'expense',
                             amount: generateAmount,
                             category: item.category,
-                            description: `${item.name} (第 ${completedPeriods + 1}/${item.periods} 期)`,
+                            description: `${item.name} (${t('common:amortization.periodLabel', { current: completedPeriods + 1, total: item.periods })})`,
                             date: nextDueDate,
                             accountId: item.accountId || undefined,
                             ledgerId: item.ledgerId,
@@ -281,7 +283,7 @@ class EasyAccountingApp {
                     await this.dataService.updateAmortization(item.id, updates);
                 }
             } catch (error) {
-                console.error(`處理攤提「${item.name || '(無名稱)'}」失敗，跳過並繼續:`, error);
+                console.error(`處理攤提「${item.name || t('common:amortization.noName')}」失敗，跳過並繼續:`, error);
             }
         }
     }
@@ -338,16 +340,16 @@ class EasyAccountingApp {
                 <div class="size-14 mx-auto mb-4 rounded-full bg-wabi-accent/20 flex items-center justify-center">
                     <i class="fa-solid fa-star text-3xl text-wabi-accent"></i>
                 </div>
-                <h3 class="text-xl font-bold text-wabi-text-primary mb-2">喜歡輕鬆記帳嗎？</h3>
+                <h3 class="text-xl font-bold text-wabi-text-primary mb-2">${t('common:review.title')}</h3>
                 <p class="text-wabi-text-secondary text-sm mb-6">
-                    如果您覺得這個 App 好用，請在 Google Play 上給我們評分，這對我們是很大的鼓勵！
+                    ${t('common:review.body')}
                 </p>
                 <div class="flex gap-3">
                     <button id="review-later-btn" class="flex-1 py-2.5 border border-wabi-border rounded-lg text-wabi-text-secondary font-medium hover:bg-wabi-bg transition-colors">
-                        稍後再說
+                        ${t('common:review.later')}
                     </button>
                     <button id="review-now-btn" class="flex-1 py-2.5 bg-wabi-primary text-white rounded-lg font-medium hover:bg-wabi-primary/90 transition-colors">
-                        前往評分
+                        ${t('common:review.rateNow')}
                     </button>
                 </div>
             </div>
@@ -435,7 +437,7 @@ class EasyAccountingApp {
         popup.innerHTML = `
             <div class="bg-wabi-bg rounded-xl max-w-xs w-full shadow-xl overflow-hidden">
                 <div class="flex items-center justify-between px-4 py-3 border-b border-wabi-border">
-                    <h3 class="font-bold text-wabi-primary">切換帳本</h3>
+                    <h3 class="font-bold text-wabi-primary">${t('common:ledgerSwitcher.title')}</h3>
                     <button id="close-ledger-popup" class="text-wabi-text-secondary hover:text-wabi-primary p-1">
                         <i class="fa-solid fa-xmark text-lg"></i>
                     </button>
@@ -451,7 +453,7 @@ class EasyAccountingApp {
                             <div class="flex-1 min-w-0 text-left flex flex-col justify-center">
                                 <div class="flex items-center gap-1.5">
                                     <span class="text-sm font-medium text-wabi-text-primary truncate">${escapeHTML(l.name)}</span>
-                                    ${l.isShared || l.type === 'shared' ? '<span class="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded flex items-center shrink-0" title="共用帳本"><i class="fa-solid fa-users mr-1"></i>共用</span>' : ''}
+                                    ${l.isShared || l.type === 'shared' ? `<span class="text-[10px] px-1.5 py-0.5 bg-blue-50 text-blue-600 border border-blue-100 rounded flex items-center shrink-0" title="${t('common:ledgerSwitcher.sharedTooltip')}"><i class="fa-solid fa-users mr-1"></i>${t('common:ledgerSwitcher.shared')}</span>` : ''}
                                 </div>
                             </div>
                             ${l.id === activeLedgerId ? '<i class="fa-solid fa-check text-wabi-primary text-sm shrink-0"></i>' : ''}
@@ -460,7 +462,7 @@ class EasyAccountingApp {
                 </div>
                 <div class="border-t border-wabi-border p-2">
                     <a href="#ledgers" id="manage-ledgers-link" class="flex items-center justify-center gap-2 py-2 text-sm text-wabi-primary hover:bg-wabi-primary/5 rounded-lg transition-colors">
-                        <i class="fa-solid fa-gear text-xs"></i> 管理帳本
+                        <i class="fa-solid fa-gear text-xs"></i> ${t('common:ledgerSwitcher.manage')}
                     </a>
                 </div>
             </div>

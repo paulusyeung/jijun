@@ -1,5 +1,6 @@
 // 欠款管理模組
 import { formatCurrency, formatDate, formatDateToString, showToast, customConfirm, customAlert, escapeHTML, escAttr } from './utils.js';
+import { t } from './i18n.js';
 
 export class DebtManager {
   constructor(dataService) {
@@ -29,7 +30,7 @@ export class DebtManager {
           <a href="#settings" class="text-wabi-text-secondary hover:text-wabi-primary">
             <i class="fa-solid fa-chevron-left text-xl"></i>
           </a>
-          <h1 class="text-xl font-bold text-wabi-primary">欠款管理</h1>
+          <h1 class="text-xl font-bold text-wabi-primary">${t('debts:pageTitle')}</h1>
           <button id="add-debt-btn" class="bg-wabi-primary text-wabi-surface rounded-full w-8 h-8 flex items-center justify-center">
             <i class="fa-solid fa-plus"></i>
           </button>
@@ -43,7 +44,7 @@ export class DebtManager {
           <button id="show-summary-table-btn" class="w-full flex items-center justify-between p-3 bg-wabi-surface rounded-lg border border-wabi-border hover:bg-wabi-bg">
             <div class="flex items-center gap-2">
               <i class="fa-solid fa-table-list text-wabi-primary"></i>
-              <span class="text-wabi-text-primary font-medium">聯絡人欠款總表</span>
+              <span class="text-wabi-text-primary font-medium">${t('debts:summaryTable')}</span>
             </div>
             <i class="fa-solid fa-chevron-right text-wabi-text-secondary"></i>
           </button>
@@ -51,15 +52,15 @@ export class DebtManager {
 
         <!-- Filter Tabs -->
         <div class="flex h-10 w-full items-center justify-center rounded-lg bg-wabi-bg border border-wabi-border p-1 mb-4">
-          <button data-filter="unsettled" class="debt-filter-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${this.currentFilter === 'unsettled' ? 'bg-wabi-surface text-wabi-primary shadow-sm' : 'text-wabi-text-secondary hover:text-wabi-text-primary'}">未結清</button>
-          <button data-filter="settled" class="debt-filter-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${this.currentFilter === 'settled' ? 'bg-wabi-surface text-wabi-primary shadow-sm' : 'text-wabi-text-secondary hover:text-wabi-text-primary'}">已結清</button>
-          <button data-filter="all" class="debt-filter-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${this.currentFilter === 'all' ? 'bg-wabi-surface text-wabi-primary shadow-sm' : 'text-wabi-text-secondary hover:text-wabi-text-primary'}">全部</button>
+          <button data-filter="unsettled" class="debt-filter-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${this.currentFilter === 'unsettled' ? 'bg-wabi-surface text-wabi-primary shadow-sm' : 'text-wabi-text-secondary hover:text-wabi-text-primary'}">${t('debts:unsettled')}</button>
+          <button data-filter="settled" class="debt-filter-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${this.currentFilter === 'settled' ? 'bg-wabi-surface text-wabi-primary shadow-sm' : 'text-wabi-text-secondary hover:text-wabi-text-primary'}">${t('debts:filter.settled')}</button>
+          <button data-filter="all" class="debt-filter-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${this.currentFilter === 'all' ? 'bg-wabi-surface text-wabi-primary shadow-sm' : 'text-wabi-text-secondary hover:text-wabi-text-primary'}">${t('common:common.all')}</button>
         </div>
 
         <!-- Contact Filter -->
         <div class="mb-4">
           <select id="contact-filter-select" class="w-full p-3 bg-wabi-surface rounded-lg border border-wabi-border text-wabi-text-primary">
-            <option value="">👤 所有聯絡人</option>
+            <option value="">${t('debts:contactFilterAll')}</option>
             ${contacts.map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('')}
           </select>
         </div>
@@ -69,7 +70,7 @@ export class DebtManager {
           <a href="#contacts" class="flex items-center justify-between p-3 bg-wabi-surface rounded-lg border border-wabi-border hover:bg-wabi-bg">
             <div class="flex items-center gap-3">
               <i class="fa-solid fa-address-book text-wabi-primary"></i>
-              <span class="text-wabi-text-primary">聯絡人管理</span>
+              <span class="text-wabi-text-primary">${t('debts:contactsLink')}</span>
             </div>
             <i class="fa-solid fa-chevron-right text-wabi-text-secondary"></i>
           </a>
@@ -109,16 +110,16 @@ export class DebtManager {
     
     const contacts = await this.dataService.getContacts();
     const selectedContact = this.currentContactFilter 
-      ? contacts.find(c => c.id === this.currentContactFilter)?.name || '聯絡人' 
+      ? contacts.find(c => c.id === this.currentContactFilter)?.name || t('debts:placeholderContact') 
       : null;
     
     container.innerHTML = `
       <div class="bg-wabi-income/10 rounded-xl p-4 text-center border border-wabi-income/20">
-        <p class="text-sm text-wabi-income font-medium">${selectedContact ? selectedContact + ' 欠我' : '別人欠我'}</p>
+        <p class="text-sm text-wabi-income font-medium">${selectedContact ? t('debts:summary.contactOwesMe', { name: selectedContact }) : t('debts:summary.theyOweMe')}</p>
         <p class="text-2xl font-bold text-wabi-income">${formatCurrency(totalReceivable)}</p>
       </div>
       <div class="bg-wabi-expense/10 rounded-xl p-4 text-center border border-wabi-expense/20">
-        <p class="text-sm text-wabi-expense font-medium">${selectedContact ? '我欠 ' + selectedContact : '我欠別人'}</p>
+        <p class="text-sm text-wabi-expense font-medium">${selectedContact ? t('debts:summary.iOweContact', { name: selectedContact }) : t('debts:summary.iOweThem')}</p>
         <p class="text-2xl font-bold text-wabi-expense">${formatCurrency(totalPayable)}</p>
       </div>
     `;
@@ -160,15 +161,15 @@ export class DebtManager {
     }).filter(Boolean).join('');
     
     const tableContent = !rows 
-      ? `<p class="p-8 text-center text-wabi-text-secondary">目前沒有未結清的欠款</p>`
+      ? `<p class="p-8 text-center text-wabi-text-secondary">${t('debts:table.noUnsettled')}</p>`
       : `
         <table class="w-full text-left">
           <thead class="bg-gray-100">
             <tr>
-              <th class="px-4 py-2 text-xs text-wabi-text-secondary font-medium">聯絡人</th>
-              <th class="px-4 py-2 text-xs text-wabi-text-secondary font-medium text-right">欠我</th>
-              <th class="px-4 py-2 text-xs text-wabi-text-secondary font-medium text-right">我欠</th>
-              <th class="px-4 py-2 text-xs text-wabi-text-secondary font-medium text-right">淨額</th>
+              <th class="px-4 py-2 text-xs text-wabi-text-secondary font-medium">${t('debts:table.contact')}</th>
+              <th class="px-4 py-2 text-xs text-wabi-text-secondary font-medium text-right">${t('debts:table.theyOweMe')}</th>
+              <th class="px-4 py-2 text-xs text-wabi-text-secondary font-medium text-right">${t('debts:table.iOwe')}</th>
+              <th class="px-4 py-2 text-xs text-wabi-text-secondary font-medium text-right">${t('debts:table.net')}</th>
             </tr>
           </thead>
           <tbody>
@@ -184,7 +185,7 @@ export class DebtManager {
       <div class="bg-wabi-bg rounded-lg max-w-lg w-full max-h-[80vh] flex flex-col">
         <div class="flex items-center justify-between p-4 border-b border-wabi-border">
           <h3 class="text-lg font-semibold text-wabi-primary">
-            <i class="fa-solid fa-table-list mr-2"></i>聯絡人欠款總表
+            <i class="fa-solid fa-table-list mr-2"></i>${t('debts:summaryTable')}
           </h3>
           <button id="close-summary-modal" class="text-wabi-text-secondary hover:text-wabi-primary">
             <i class="fa-solid fa-times text-xl"></i>
@@ -194,7 +195,7 @@ export class DebtManager {
           ${tableContent}
         </div>
         <div class="p-3 border-t border-wabi-border text-center text-xs text-wabi-text-secondary">
-          點擊任一行可篩選該聯絡人的欠款
+          ${t('debts:table.clickToFilter')}
         </div>
       </div>
     `;
@@ -283,10 +284,11 @@ export class DebtManager {
     const debts = allDebts.slice(startIndex, startIndex + this.pageSize);
 
     if (allDebts.length === 0) {
+      const filterLabel = this.currentFilter === 'unsettled' ? t('debts:unsettled') : this.currentFilter === 'settled' ? t('debts:filter.settled') : '';
       listContainer.innerHTML = `
         <div class="text-center py-8 text-wabi-text-secondary">
           <i class="fa-solid fa-receipt text-4xl mb-3"></i>
-          <p>目前沒有${this.currentFilter === 'unsettled' ? '未結清的' : this.currentFilter === 'settled' ? '已結清的' : ''}欠款記錄</p>
+          <p>${filterLabel ? t('debts:empty.listFiltered', { filter: filterLabel }) : t('debts:empty.listAll')}</p>
         </div>
       `;
       return;
@@ -294,7 +296,7 @@ export class DebtManager {
 
     let html = debts.map(debt => {
       const contact = contacts.find(c => c.id === debt.contactId);
-      const contactName = contact?.name || '未知聯絡人';
+      const contactName = contact?.name || t('debts:unknownContact');
       const isReceivable = debt.type === 'receivable';
       // Use remainingAmount for display, fallback for backward compatibility
       const remainingAmount = debt.remainingAmount ?? debt.originalAmount ?? debt.amount ?? 0;
@@ -313,7 +315,7 @@ export class DebtManager {
               </div>
               <div>
                 <p class="font-medium text-wabi-text-primary">${escAttr(contactName)}</p>
-                <p class="text-sm text-wabi-text-secondary">${isReceivable ? '欠我' : '我欠'}</p>
+                <p class="text-sm text-wabi-text-secondary">${isReceivable ? t('debts:badge.theyOweMe') : t('debts:badge.iOwe')}</p>
               </div>
             </div>
             <div class="text-right">
@@ -326,7 +328,7 @@ export class DebtManager {
           ${hasPartialPayments ? `
             <div class="mt-2">
               <div class="flex justify-between text-xs text-wabi-text-secondary mb-1">
-                <span>已${isReceivable ? '收款' : '還款'} ${formatCurrency(paidAmount)}</span>
+                <span>${isReceivable ? t('debts:progress.received') : t('debts:progress.repaid')} ${formatCurrency(paidAmount)}</span>
                 <span>${progressPercent}%</span>
               </div>
               <div class="w-full bg-wabi-bg rounded-full h-1.5">
@@ -336,16 +338,16 @@ export class DebtManager {
           ` : ''}
           ${hasPaymentHistory ? `
             <button class="view-history-btn w-full mt-2 py-1 text-xs text-wabi-primary border border-wabi-primary/30 rounded bg-wabi-primary/5" data-id="${debt.id}">
-              <i class="fa-solid fa-clock-rotate-left mr-1"></i>查看還款歷程 (${debt.payments.length} 筆)
+              <i class="fa-solid fa-clock-rotate-left mr-1"></i>${t('debts:history.view', { count: debt.payments.length })}
             </button>
           ` : ''}
           ${!debt.settled ? `
             <div class="flex gap-2 mt-3 pt-3 border-t border-wabi-border">
               <button class="settle-debt-btn flex-1 py-2 text-sm font-medium text-wabi-surface bg-wabi-primary rounded-lg" data-id="${debt.id}">
-                ${isReceivable ? '全額收款' : '全額還款'}
+                ${isReceivable ? t('debts:button.settleFullReceivable') : t('debts:button.settleFullPayable')}
               </button>
               <button class="partial-payment-btn px-4 py-2 text-sm font-medium text-wabi-primary border border-wabi-primary rounded-lg" data-id="${debt.id}">
-                部分
+                ${t('debts:button.partial')}
               </button>
               <button class="edit-debt-btn px-4 py-2 text-sm font-medium text-wabi-primary border border-wabi-primary rounded-lg" data-id="${debt.id}">
                 <i class="fa-solid fa-pen"></i>
@@ -361,14 +363,14 @@ export class DebtManager {
             <div class="flex items-center justify-between mt-3 pt-3 border-t border-wabi-border">
               <div class="flex items-center gap-2 text-sm text-wabi-text-secondary">
                 <i class="fa-solid fa-check-circle text-wabi-income"></i>
-                <span>已於 ${formatDate(new Date(debt.settledAt).toISOString().split('T')[0], 'short')} 結清</span>
+                <span>${t('debts:label.settledOn', { date: formatDate(new Date(debt.settledAt).toISOString().split('T')[0], 'short') })}</span>
               </div>
               <div class="flex gap-2">
                 <button class="edit-debt-btn px-3 py-1 text-xs font-medium text-wabi-primary border border-wabi-primary rounded-lg" data-id="${debt.id}">
-                  編輯
+                  ${t('common:buttons.edit')}
                 </button>
                 <button class="delete-debt-btn px-3 py-1 text-xs font-medium text-wabi-expense border border-wabi-expense rounded-lg" data-id="${debt.id}">
-                  刪除
+                  ${t('common:buttons.delete')}
                 </button>
               </div>
             </div>
@@ -382,11 +384,11 @@ export class DebtManager {
       html += `
         <div class="flex items-center justify-center gap-4 mt-4 py-3">
           <button id="prev-page-btn" class="px-4 py-2 text-sm font-medium rounded-lg ${this.currentPage === 1 ? 'bg-wabi-bg text-wabi-text-secondary cursor-not-allowed' : 'bg-wabi-primary text-wabi-surface'}" ${this.currentPage === 1 ? 'disabled' : ''}>
-            <i class="fa-solid fa-chevron-left mr-1"></i>上一頁
+            <i class="fa-solid fa-chevron-left mr-1"></i>${t('debts:pagination.prev')}
           </button>
           <span class="text-sm text-wabi-text-secondary">${this.currentPage} / ${totalPages}</span>
           <button id="next-page-btn" class="px-4 py-2 text-sm font-medium rounded-lg ${this.currentPage === totalPages ? 'bg-wabi-bg text-wabi-text-secondary cursor-not-allowed' : 'bg-wabi-primary text-wabi-surface'}" ${this.currentPage === totalPages ? 'disabled' : ''}>
-            下一頁<i class="fa-solid fa-chevron-right ml-1"></i>
+            ${t('debts:pagination.next')}<i class="fa-solid fa-chevron-right ml-1"></i>
           </button>
         </div>
       `;
@@ -398,9 +400,9 @@ export class DebtManager {
     listContainer.querySelectorAll('.settle-debt-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const debtId = parseInt(btn.dataset.id);
-        if (await customConfirm('確定要標記此欠款為全額結清嗎？系統將自動產生對應的收支記錄。')) {
+        if (await customConfirm(t('debts:confirm.settleFull'))) {
           await this.dataService.settleDebt(debtId);
-          showToast('已結清欠款並產生記帳紀錄', 'success');
+          showToast(t('debts:toast.settled'), 'success');
           // Maintain current filter state instead of full re-render
           await this.updateSummaryCards();
           await this.loadDebtList();
@@ -430,21 +432,20 @@ export class DebtManager {
         const debtId = parseInt(btn.dataset.id);
         const debt = await this.dataService.getDebt(debtId);
         
-        if (await customConfirm('確定要刪除此欠款記錄嗎？')) {
+        if (await customConfirm(t('debts:confirm.deleteDebt'))) {
           const recordId = debt?.recordId;
           await this.dataService.deleteDebt(debtId);
           
           if (recordId) {
-              if (await customConfirm('此欠款有關聯的記帳紀錄，是否也要一併刪除該紀錄？')) {
+              if (await customConfirm(t('debts:confirm.deleteRelatedRecord'))) {
                   await this.dataService.deleteRecord(recordId);
-                  showToast('欠款與關聯紀錄已刪除', 'success');
+                  showToast(t('debts:toast.deletedWithRecord'), 'success');
               } else {
-                  // 清除紀錄上的反向引用，避免留下孤立指標
                   await this.dataService.updateRecord(recordId, { debtId: null });
-                  showToast('已刪除欠款紀錄', 'success');
+                  showToast(t('debts:toast.deleted'), 'success');
               }
           } else {
-              showToast('已刪除欠款紀錄', 'success');
+              showToast(t('debts:toast.deleted'), 'success');
           }
           
           await this.updateSummaryCards();
@@ -498,7 +499,7 @@ export class DebtManager {
   async showPartialPaymentModal(debtId) {
     const debt = await this.dataService.getDebt(debtId);
     const contact = await this.dataService.getContact(debt.contactId);
-    const contactName = contact?.name || '未知聯絡人';
+    const contactName = contact?.name || t('debts:unknownContact');
     const remainingAmount = debt.remainingAmount ?? debt.originalAmount ?? debt.amount ?? 0;
     const isReceivable = debt.type === 'receivable';
 
@@ -508,22 +509,22 @@ export class DebtManager {
 
     modal.innerHTML = `
       <div class="bg-wabi-bg rounded-lg max-w-sm w-full p-6">
-        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">部分${isReceivable ? '收款' : '還款'}</h3>
-        <p class="text-sm text-wabi-text-secondary mb-4">${escAttr(contactName)} - ${escAttr(debt.description || '無備註')}</p>
-        <p class="text-sm text-wabi-text-secondary mb-2">剩餘金額：<span class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${formatCurrency(remainingAmount)}</span></p>
+        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">${isReceivable ? t('debts:partialPayment.titleReceivable') : t('debts:partialPayment.titlePayable')}</h3>
+        <p class="text-sm text-wabi-text-secondary mb-4">${escAttr(contactName)} - ${escAttr(debt.description || t('debts:label.noNote'))}</p>
+        <p class="text-sm text-wabi-text-secondary mb-2">${t('debts:label.remaining')}<span class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${formatCurrency(remainingAmount)}</span></p>
         
         <div class="mb-6">
-          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${isReceivable ? '收款' : '還款'}金額</label>
-          <input type="number" id="partial-amount" value="" min="1" max="${remainingAmount}" step="1" placeholder="輸入金額"
+          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${isReceivable ? t('debts:partialPayment.amountLabelReceivable') : t('debts:partialPayment.amountLabelPayable')}</label>
+          <input type="number" id="partial-amount" value="" min="1" max="${remainingAmount}" step="1" placeholder="${t('debts:partialPayment.enterAmount')}"
                  class="w-full p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary">
         </div>
 
         <div class="flex space-x-3">
           <button id="confirm-partial-btn" class="flex-1 bg-wabi-primary hover:bg-wabi-primary/90 text-wabi-surface font-bold py-3 rounded-lg transition-colors">
-            確認
+            ${t('common:buttons.confirm')}
           </button>
           <button id="cancel-partial-btn" class="px-6 bg-wabi-border hover:bg-wabi-border text-wabi-text-primary py-3 rounded-lg transition-colors">
-            取消
+            ${t('common:buttons.cancel')}
           </button>
         </div>
       </div>
@@ -547,12 +548,12 @@ export class DebtManager {
       const amount = parseFloat(modal.querySelector('#partial-amount').value);
 
       if (!amount || amount <= 0) {
-        customAlert('請輸入有效金額');
+        customAlert(t('debts:partialPayment.invalidAmount'));
         return;
       }
 
       if (amount > remainingAmount) {
-        customAlert(`金額不能超過剩餘金額 ${formatCurrency(remainingAmount)}`);
+        customAlert(t('debts:partialPayment.exceedsRemaining', { amount: formatCurrency(remainingAmount) }));
         return;
       }
 
@@ -567,7 +568,7 @@ export class DebtManager {
   async showPaymentHistoryModal(debtId) {
     const debt = await this.dataService.getDebt(debtId);
     const contact = await this.dataService.getContact(debt.contactId);
-    const contactName = contact?.name || '未知聯絡人';
+    const contactName = contact?.name || t('debts:unknownContact');
     const isReceivable = debt.type === 'receivable';
     const payments = debt.payments || [];
 
@@ -577,12 +578,12 @@ export class DebtManager {
 
     modal.innerHTML = `
       <div class="bg-wabi-bg rounded-lg max-w-md w-full p-6 max-h-[80vh] overflow-y-auto">
-        <h3 class="text-lg font-semibold mb-2 text-wabi-primary">${isReceivable ? '收款' : '還款'}歷程</h3>
-        <p class="text-sm text-wabi-text-secondary mb-4">${contactName} - ${debt.description || '無備註'}</p>
+        <h3 class="text-lg font-semibold mb-2 text-wabi-primary">${isReceivable ? t('debts:history.titleReceivable') : t('debts:history.titlePayable')}</h3>
+        <p class="text-sm text-wabi-text-secondary mb-4">${contactName} - ${debt.description || t('debts:label.noNote')}</p>
         
         <div class="space-y-3 mb-4">
           ${payments.length === 0 ? `
-            <p class="text-center py-4 text-wabi-text-secondary">尚無還款記錄</p>
+            <p class="text-center py-4 text-wabi-text-secondary">${t('debts:history.noPayments')}</p>
           ` : payments.map((payment, index) => `
             <div class="flex items-center justify-between p-3 bg-wabi-surface rounded-lg border border-wabi-border">
               <div class="flex items-center gap-3">
@@ -602,23 +603,23 @@ export class DebtManager {
 
         <div class="border-t border-wabi-border pt-3">
           <div class="flex justify-between text-sm mb-2">
-            <span class="text-wabi-text-secondary">原始金額</span>
+            <span class="text-wabi-text-secondary">${t('debts:history.originalAmount')}</span>
             <span class="font-medium">${formatCurrency(debt.originalAmount || debt.amount)}</span>
           </div>
           <div class="flex justify-between text-sm mb-2">
-            <span class="text-wabi-text-secondary">已${isReceivable ? '收款' : '還款'}</span>
+            <span class="text-wabi-text-secondary">${isReceivable ? t('debts:history.totalReceived') : t('debts:history.totalRepaid')}</span>
             <span class="font-medium ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">
               ${formatCurrency(payments.reduce((sum, p) => sum + p.amount, 0))}
             </span>
           </div>
           <div class="flex justify-between text-sm">
-            <span class="text-wabi-text-secondary">剩餘金額</span>
+            <span class="text-wabi-text-secondary">${t('debts:history.remaining')}</span>
             <span class="font-bold">${formatCurrency(debt.remainingAmount || 0)}</span>
           </div>
         </div>
 
         <button id="close-history-btn" class="w-full mt-4 py-3 bg-wabi-border hover:bg-wabi-border text-wabi-text-primary rounded-lg transition-colors">
-          關閉
+          ${t('common:buttons.close')}
         </button>
       </div>
     `;
@@ -638,7 +639,7 @@ export class DebtManager {
     const contacts = await this.dataService.getContacts();
 
     if (contacts.length === 0) {
-      customAlert('請先新增聯絡人');
+      customAlert(t('debts:addDebt.noContacts'));
       window.location.hash = '#contacts';
       return;
     }
@@ -653,20 +654,20 @@ export class DebtManager {
 
     modal.innerHTML = `
       <div class="bg-wabi-bg rounded-lg max-w-md w-full p-6">
-        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">${isEdit ? '編輯欠款' : '新增欠款記錄'}</h3>
+        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">${isEdit ? t('debts:addDebt.titleEdit') : t('debts:addDebt.titleAdd')}</h3>
         
         <!-- Type Selector -->
         <div class="mb-4">
-          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">類型</label>
+          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${t('common:common.type')}</label>
           <div class="flex h-10 w-full items-center justify-center rounded-lg bg-wabi-bg/50 p-1">
-            <button id="debt-type-receivable" class="debt-type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${(!isEdit || debtToEdit?.type === 'receivable') ? 'bg-wabi-income text-wabi-surface' : 'text-wabi-text-secondary'}">別人欠我</button>
-            <button id="debt-type-payable" class="debt-type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${(isEdit && debtToEdit?.type === 'payable') ? 'bg-wabi-expense text-wabi-surface' : 'text-wabi-text-secondary'}">我欠別人</button>
+            <button id="debt-type-receivable" class="debt-type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${(!isEdit || debtToEdit?.type === 'receivable') ? 'bg-wabi-income text-wabi-surface' : 'text-wabi-text-secondary'}">${t('debts:addDebt.typeReceivable')}</button>
+            <button id="debt-type-payable" class="debt-type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium ${(isEdit && debtToEdit?.type === 'payable') ? 'bg-wabi-expense text-wabi-surface' : 'text-wabi-text-secondary'}">${t('debts:addDebt.typePayable')}</button>
           </div>
         </div>
 
         <!-- Contact -->
         <div class="mb-4">
-          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">聯絡人</label>
+          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${t('common:common.contact')}</label>
           <select id="debt-contact" class="w-full p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary">
             ${contactOptions}
           </select>
@@ -674,32 +675,32 @@ export class DebtManager {
 
         <!-- Amount -->
         <div class="mb-4">
-          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">金額</label>
-          <input type="number" id="debt-amount" value="${debtToEdit?.originalAmount ?? debtToEdit?.amount ?? ''}" min="0" step="1" placeholder="輸入金額"
+          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${t('common:common.amount')}</label>
+          <input type="number" id="debt-amount" value="${debtToEdit?.originalAmount ?? debtToEdit?.amount ?? ''}" min="0" step="1" placeholder="${t('debts:partialPayment.enterAmount')}"
                  class="w-full p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary">
         </div>
 
         <!-- Date -->
         <div class="mb-4">
-          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">日期</label>
+          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${t('common:common.date')}</label>
           <input type="date" id="debt-date" value="${debtToEdit?.date || formatDateToString(new Date())}"
                  class="w-full p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary">
         </div>
 
         <!-- Description -->
         <div class="mb-6">
-          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">備註</label>
-             <input type="text" id="debt-description" value="${escAttr(debtToEdit?.description || '')}" placeholder="例如：午餐代墊"
+          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${t('common:common.note')}</label>
+             <input type="text" id="debt-description" value="${escAttr(debtToEdit?.description || '')}" placeholder="${t('debts:addDebt.descriptionPlaceholder')}"
                  class="w-full p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary">
         </div>
 
         <!-- Buttons -->
         <div class="flex space-x-3">
           <button id="save-debt-btn" class="flex-1 bg-wabi-primary hover:bg-wabi-primary/90 text-wabi-surface font-bold py-3 rounded-lg transition-colors">
-            ${isEdit ? '儲存' : '新增'}
+            ${isEdit ? t('common:buttons.save') : t('common:buttons.add')}
           </button>
           <button id="cancel-debt-btn" class="px-6 bg-wabi-border hover:bg-wabi-border text-wabi-text-primary py-3 rounded-lg transition-colors">
-            取消
+            ${t('common:buttons.cancel')}
           </button>
         </div>
       </div>
@@ -740,7 +741,7 @@ export class DebtManager {
       const description = modal.querySelector('#debt-description').value;
 
       if (!contactId || !amount || amount <= 0 || !date) {
-        customAlert('請填寫完整資料');
+        customAlert(t('debts:addDebt.requiredFields'));
         return;
       }
 
@@ -769,10 +770,10 @@ export class DebtManager {
         }
 
         await this.dataService.updateDebt(debtToEdit.id, debtData);
-        showToast('已更新欠款紀錄', 'success');
+        showToast(t('debts:toast.updated'), 'success');
       } else {
         await this.dataService.addDebt(debtData);
-        showToast('已新增欠款紀錄', 'success');
+        showToast(t('debts:toast.added'), 'success');
       }
 
       closeModal();
@@ -785,17 +786,17 @@ export class DebtManager {
   async showReminderModal(debtId) {
     const debt = await this.dataService.getDebt(debtId);
     const contact = await this.dataService.getContact(debt.contactId);
-    const contactName = contact?.name || '朋友';
+    const contactName = contact?.name || t('debts:defaultContactName');
 
     const isReceivable = debt.type === 'receivable';
     // Use remainingAmount for reminder message
     const remainingAmount = debt.remainingAmount ?? debt.originalAmount ?? debt.amount ?? 0;
-    let message = '';
+    const descText = debt.description ? `「${debt.description}」` : '';
 
     if (isReceivable) {
-      message = `嗨 ${contactName}，提醒一下之前${debt.date}${debt.description ? `「${debt.description}」` : ''}的 ${formatCurrency(remainingAmount)} 還沒收到喔！方便的話再麻煩你轉給我，謝謝！`;
+      message = t('debts:reminder.messageReceivable', { name: contactName, date: debt.date, description: descText, amount: formatCurrency(remainingAmount) });
     } else {
-      message = `嗨 ${contactName}，我還欠你${debt.date}${debt.description ? `「${debt.description}」` : ''} ${formatCurrency(remainingAmount)}，我會盡快還你的！`;
+      message = t('debts:reminder.messagePayable', { name: contactName, date: debt.date, description: descText, amount: formatCurrency(remainingAmount) });
     }
 
     const modal = document.createElement('div');
@@ -804,17 +805,17 @@ export class DebtManager {
 
     modal.innerHTML = `
       <div class="bg-wabi-bg rounded-lg max-w-md w-full p-6">
-        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">提醒訊息</h3>
+        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">${t('debts:reminder.title')}</h3>
         <textarea id="reminder-text" class="w-full h-32 p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary resize-none mb-4">${escAttr(message)}</textarea>
         <div class="flex space-x-3">
           <button id="copy-reminder-btn" class="flex-1 bg-wabi-primary hover:bg-wabi-primary/90 text-wabi-surface font-bold py-3 rounded-lg transition-colors">
-            <i class="fa-solid fa-copy mr-2"></i>複製
+            <i class="fa-solid fa-copy mr-2"></i>${t('debts:button.copy')}
           </button>
           <button id="share-reminder-btn" class="flex-1 bg-wabi-income hover:bg-wabi-income/90 text-wabi-surface font-bold py-3 rounded-lg transition-colors">
-            <i class="fa-solid fa-share-nodes mr-2"></i>分享
+            <i class="fa-solid fa-share-nodes mr-2"></i>${t('common:buttons.share')}
           </button>
           <button id="close-reminder-btn" class="px-4 bg-wabi-border hover:bg-wabi-border text-wabi-text-primary py-3 rounded-lg transition-colors">
-            關閉
+            ${t('common:buttons.close')}
           </button>
         </div>
       </div>
@@ -833,13 +834,12 @@ export class DebtManager {
       const text = modal.querySelector('#reminder-text').value;
       try {
         await navigator.clipboard.writeText(text);
-        customAlert('訊息已複製到剪貼簿！');
+        customAlert(t('debts:reminder.copied'));
         closeModal();
       } catch (err) {
-        // Fallback for older browsers
         modal.querySelector('#reminder-text').select();
         document.execCommand('copy');
-        customAlert('訊息已複製！');
+        customAlert(t('debts:reminder.copiedFallback'));
         closeModal();
       }
     });
@@ -850,23 +850,21 @@ export class DebtManager {
       if (navigator.share) {
         try {
           await navigator.share({
-            title: '欠款提醒',
+            title: t('debts:reminder.shareTitle'),
             text: text
           });
           closeModal();
         } catch (err) {
-          // User cancelled or share failed
           if (err.name !== 'AbortError') {
-            customAlert('分享失敗，請使用複製功能');
+            customAlert(t('debts:reminder.shareFailed'));
           }
         }
       } else {
-        // Fallback: copy to clipboard
         try {
           await navigator.clipboard.writeText(text);
-          customAlert('您的瀏覽器不支援分享功能，訊息已複製到剪貼簿！');
+          customAlert(t('debts:reminder.shareNotSupported'));
         } catch (err) {
-          customAlert('分享功能不支援，請使用複製功能');
+          customAlert(t('debts:reminder.shareFallbackFailed'));
         }
       }
     });
@@ -884,7 +882,7 @@ export class DebtManager {
           <a href="#debts" class="text-wabi-text-secondary hover:text-wabi-primary">
             <i class="fa-solid fa-chevron-left text-xl"></i>
           </a>
-          <h1 class="text-xl font-bold text-wabi-primary">聯絡人管理</h1>
+          <h1 class="text-xl font-bold text-wabi-primary">${t('debts:contacts.pageTitle')}</h1>
           <button id="add-contact-btn" class="bg-wabi-primary text-wabi-surface rounded-full w-8 h-8 flex items-center justify-center">
             <i class="fa-solid fa-plus"></i>
           </button>
@@ -895,7 +893,7 @@ export class DebtManager {
           ${contacts.length === 0 ? `
             <div class="text-center py-8 text-wabi-text-secondary">
               <i class="fa-solid fa-user-plus text-4xl mb-3"></i>
-              <p>尚未新增任何聯絡人</p>
+              <p>${t('debts:contacts.empty')}</p>
             </div>
           ` : contacts.map(contact => `
             <div class="flex items-center justify-between bg-wabi-surface p-4 rounded-lg border border-wabi-border" data-contact-id="${contact.id}">
@@ -943,10 +941,10 @@ export class DebtManager {
         // Check if contact has debts
         const debts = await this.dataService.getDebts({ contactId });
         if (debts.length > 0) {
-          customAlert('此聯絡人尚有關聯的欠款記錄，無法刪除。');
+          customAlert(t('debts:contacts.hasDebts'));
           return;
         }
-        if (await customConfirm('確定要刪除此聯絡人嗎？')) {
+        if (await customConfirm(t('debts:confirm.deleteContact'))) {
           await this.dataService.deleteContact(contactId);
           await this.renderContactsPage(container);
         }
@@ -973,7 +971,7 @@ export class DebtManager {
 
     modal.innerHTML = `
       <div class="bg-wabi-bg rounded-lg max-w-sm w-full p-6">
-        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">${isEdit ? '編輯聯絡人' : '新增聯絡人'}</h3>
+        <h3 class="text-lg font-semibold mb-4 text-wabi-primary">${isEdit ? t('debts:contacts.modalTitleEdit') : t('debts:contacts.modalTitleAdd')}</h3>
         
         <!-- Avatar Upload -->
         <div class="flex justify-center mb-4">
@@ -989,20 +987,20 @@ export class DebtManager {
             <input type="file" id="avatar-input" accept="image/*" class="hidden">
           </label>
         </div>
-        <p class="text-xs text-center text-wabi-text-secondary mb-4">點擊上傳頭像</p>
+        <p class="text-xs text-center text-wabi-text-secondary mb-4">${t('debts:contacts.uploadHint')}</p>
         
         <div class="mb-6">
-          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">名稱</label>
-             <input type="text" id="contact-name" value="${escAttr(contactToEdit?.name || '')}" placeholder="輸入聯絡人名稱"
+          <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${t('common:common.name')}</label>
+             <input type="text" id="contact-name" value="${escAttr(contactToEdit?.name || '')}" placeholder="${t('debts:contacts.namePlaceholder')}"
                  class="w-full p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary">
         </div>
 
         <div class="flex space-x-3">
           <button id="save-contact-btn" class="flex-1 bg-wabi-primary hover:bg-wabi-primary/90 text-wabi-surface font-bold py-3 rounded-lg transition-colors">
-            ${isEdit ? '儲存' : '新增'}
+            ${isEdit ? t('common:buttons.save') : t('common:buttons.add')}
           </button>
           <button id="cancel-contact-btn" class="px-6 bg-wabi-border hover:bg-wabi-border text-wabi-text-primary py-3 rounded-lg transition-colors">
-            取消
+            ${t('common:buttons.cancel')}
           </button>
         </div>
       </div>
@@ -1049,7 +1047,7 @@ export class DebtManager {
       const name = modal.querySelector('#contact-name').value.trim();
 
       if (!name) {
-        customAlert('請輸入聯絡人名稱');
+        customAlert(t('debts:contacts.nameRequired'));
         return;
       }
 

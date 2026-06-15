@@ -1,4 +1,5 @@
 import { StatisticsManager } from '../statistics.js';
+import { t } from '../i18n.js';
 
 export class StatsPage {
     constructor(app) {
@@ -9,7 +10,7 @@ export class StatsPage {
         this.app.appContainer.innerHTML = `
             <div class="page active max-w-3xl mx-auto">
                 <header class="sticky top-0 z-10 flex shrink-0 items-center justify-between p-4 bg-wabi-bg/80 backdrop-blur-sm border-b border-wabi-border">
-                    <h1 class="text-lg font-bold text-wabi-primary flex-1 text-center">收支分析</h1>
+                    <h1 class="text-lg font-bold text-wabi-primary flex-1 text-center">${t('stats:title')}</h1>
                 </header>
                 <main class="flex-1 p-4 pb-24">
                     <div id="stats-container"></div>

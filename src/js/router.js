@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { showToast, triggerHaptic } from './utils.js';
 
 export class Router {
@@ -55,7 +56,7 @@ export class Router {
                         customPage.renderFn(this.app.appContainer);
                     } catch (e) {
                         console.error('Error rendering custom page:', e);
-                        showToast('頁面載入失敗', 'error');
+                        showToast(t('errors:pageLoadFailed'), 'error');
                     }
                 } else {
                     console.warn('Route not found, redirecting to home:', pageName);
@@ -67,7 +68,7 @@ export class Router {
             await this.app.pluginManager.triggerHook('onPageRenderAfter', pageName);
         } catch (error) {
             console.error('Error during route change:', error);
-            showToast('頁面載入發生錯誤', 'error');
+            showToast(t('errors:pageLoadError'), 'error');
         }
     }
 

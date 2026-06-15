@@ -1,5 +1,6 @@
 import { formatCurrency, formatDate, showToast, getDateRange, formatDateToString, getMonthRange } from '../utils.js';
 import Sortable from 'sortablejs';
+import { t } from '../i18n.js';
 
 export class HomePage {
     constructor(app) {
@@ -20,11 +21,11 @@ export class HomePage {
                     </button>
                     <div class="flex items-center gap-2">
                         ${ledgerCount > 1 ? `
-                        <button id="home-ledger-btn" class="flex items-center gap-2 px-2.5 py-1.5 bg-wabi-primary/5 rounded-lg border border-wabi-border hover:bg-wabi-primary/10 transition-colors md:hidden" title="切換帳本">
+                        <button id="home-ledger-btn" class="flex items-center gap-2 px-2.5 py-1.5 bg-wabi-primary/5 rounded-lg border border-wabi-border hover:bg-wabi-primary/10 transition-colors md:hidden" title="${t('home:switchLedger')}">
                             <div class="flex items-center justify-center rounded text-white shrink-0 size-6 text-xs" style="background-color: ${activeLedger?.color || '#334A52'}">
                                 <i class="${activeLedger?.icon || 'fa-solid fa-book'} text-[10px]"></i>
                             </div>
-                            <span class="text-xs font-medium text-wabi-text-primary max-w-[60px] truncate">${activeLedger?.name || '預設帳本'}</span>
+                            <span class="text-xs font-medium text-wabi-text-primary max-w-[60px] truncate">${activeLedger?.name || t('home:defaultLedger')}</span>
                         </button>` : ''}
                         <a href="#settings" class="text-wabi-text-secondary hover:text-wabi-primary">
                             <i class="fa-solid fa-gear text-xl"></i>
@@ -34,15 +35,15 @@ export class HomePage {
 
                 <!-- Balance Card -->
                 <div class="bg-wabi-surface rounded-xl shadow-sm border border-wabi-border p-6 mb-8">
-                    <p class="text-center text-wabi-text-secondary text-base font-medium">本月結餘</p>
+                    <p class="text-center text-wabi-text-secondary text-base font-medium">${t('home:monthlyBalance')}</p>
                     <p id="home-balance" class="text-center text-wabi-primary text-4xl font-bold tracking-tight mt-1">$0</p>
                     <div class="flex justify-around pt-6 mt-4 border-t border-wabi-border">
                         <div class="text-center">
-                            <p class="text-sm text-wabi-text-secondary">總收入</p>
+                            <p class="text-sm text-wabi-text-secondary">${t('home:totalIncome')}</p>
                             <p id="home-income" class="text-lg font-bold text-wabi-income">$0</p>
                         </div>
                         <div class="text-center">
-                            <p class="text-sm text-wabi-text-secondary">總支出</p>
+                            <p class="text-sm text-wabi-text-secondary">${t('home:totalExpense')}</p>
                             <p id="home-expense" class="text-lg font-bold text-wabi-expense">$0</p>
                         </div>
                     </div>
@@ -56,9 +57,9 @@ export class HomePage {
 
                 <!-- Plugin Widgets -->
                 <div class="flex items-center justify-between mb-2 mt-6">
-                     <h3 class="text-sm font-bold text-wabi-text-secondary">小工具</h3>
+                     <h3 class="text-sm font-bold text-wabi-text-secondary">${t('home:widgets')}</h3>
                      <button id="manage-widgets-btn" class="text-xs text-wabi-primary hover:underline bg-wabi-primary/10 px-2 py-1 rounded">
-                        <i class="fa-solid fa-sort mr-1"></i>調整順序
+                        <i class="fa-solid fa-sort mr-1"></i>${t('home:adjustOrder')}
                      </button>
                 </div>
                 <div id="plugin-home-widgets" class="mb-6"></div>
@@ -66,8 +67,8 @@ export class HomePage {
                 <!-- Recent Transactions -->
                 <div class="mb-12">
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-bold text-wabi-primary">最近紀錄</h3>
-                        <a href="#records" class="text-sm font-medium text-wabi-accent hover:underline">查看全部</a>
+                        <h3 class="text-lg font-bold text-wabi-primary">${t('home:recentRecords')}</h3>
+                        <a href="#records" class="text-sm font-medium text-wabi-accent hover:underline">${t('home:viewAll')}</a>
                     </div>
                     <div id="recent-records-container" class="space-y-2"></div>
                 </div>
@@ -75,11 +76,11 @@ export class HomePage {
                 <!-- Footer (Privacy Policy Link for Google OAuth review) -->
                 <div class="pt-8 border-t border-wabi-border/50 text-center text-xs text-wabi-text-secondary opacity-60">
                     <div class="flex justify-center gap-3 mb-1.5">
-                        <a href="#privacy" class="hover:underline">隱私權政策</a>
+                        <a href="#privacy" class="hover:underline">${t('common:buttons.privacy')}</a>
                         <span>•</span>
-                        <a href="#license" class="hover:underline">授權條款</a>
+                        <a href="#license" class="hover:underline">${t('common:buttons.license')}</a>
                     </div>
-                    <p>&copy; 2025 The walking fish 步行魚. All rights reserved.</p>
+                    <p>&copy; 2025 ${t('home:brandName')}. All rights reserved.</p>
                 </div>
             </div>
         `;
@@ -144,7 +145,7 @@ export class HomePage {
 
         const balanceCardTitle = document.querySelector('.page.active .bg-wabi-surface p:first-child');
         if (balanceCardTitle) {
-            balanceCardTitle.textContent = `${selectedMonth.replace('-', ' / ')} 結餘`;
+            balanceCardTitle.textContent = t('home:balanceLabel', { month: selectedMonth.replace('-', ' / ') });
         }
 
         document.getElementById('home-balance').textContent = formatCurrency(stats.totalIncome - stats.totalExpense);
@@ -153,7 +154,7 @@ export class HomePage {
 
         const container = document.getElementById('recent-records-container');
         if (recentRecords.length === 0) {
-            container.innerHTML = `<p class="text-center text-wabi-text-secondary py-4">還沒有任何紀錄喔！</p>`;
+            container.innerHTML = `<p class="text-center text-wabi-text-secondary py-4">${t('home:noRecords')}</p>`;
         } else {
             container.innerHTML = recentRecords.map(record => {
                 const isIncome = record.type === 'income';
@@ -161,12 +162,12 @@ export class HomePage {
 
                 if (record.category === 'transfer') {
                     icon = 'fa-solid fa-money-bill-transfer';
-                    name = '帳戶間轉帳';
+                    name = t('home:transferBetweenAccounts');
                     color = 'bg-gray-400';
                 } else {
                     const category = this.app.categoryManager.getCategoryById(record.type, record.category);
                     icon = category?.icon || 'fa-solid fa-question';
-                    name = category?.name || '未分類';
+                    name = category ? (category.nameKey ? t(category.nameKey) : category.name) : t('home:uncategorized');
                     color = category?.color || 'bg-gray-400';
                 }
 
@@ -224,18 +225,18 @@ export class HomePage {
                             <i class="fa-solid fa-hand-holding-dollar text-lg"></i>
                         </div>
                         <div>
-                            <p class="text-sm font-medium text-wabi-text-secondary">欠款總覽</p>
-                            <p class="text-xs text-wabi-text-secondary">點擊管理</p>
+<p class="text-sm font-medium text-wabi-text-secondary">${t('home:debtOverview')}</p>
+                             <p class="text-xs text-wabi-text-secondary">${t('home:clickToManage')}</p>
                         </div>
                     </div>
                     <div class="flex items-center gap-4 text-right">
                         <div>
-                            <p class="text-xs text-wabi-text-secondary">他人欠我</p>
-                            <p class="text-sm font-bold text-wabi-income">${formatCurrency(totalReceivable)}</p>
-                        </div>
-                        <div class="w-px h-8 bg-wabi-border"></div>
-                        <div>
-                            <p class="text-xs text-wabi-text-secondary">我欠他人</p>
+<p class="text-xs text-wabi-text-secondary">${t('home:othersOweMe')}</p>
+                             <p class="text-sm font-bold text-wabi-income">${formatCurrency(totalReceivable)}</p>
+                         </div>
+                         <div class="w-px h-8 bg-wabi-border"></div>
+                         <div>
+                             <p class="text-xs text-wabi-text-secondary">${t('home:iOweOthers')}</p>
                             <p class="text-sm font-bold text-wabi-expense">${formatCurrency(totalPayable)}</p>
                         </div>
                     </div>
@@ -273,13 +274,13 @@ export class HomePage {
         const renderModalContent = () => {
             modal.innerHTML = `
                 <div class="bg-wabi-bg rounded-lg max-w-xs w-full p-6">
-                    <h3 class="text-lg font-semibold mb-4 text-wabi-primary text-center">選擇月份</h3>
+                    <h3 class="text-lg font-semibold mb-4 text-wabi-primary text-center">${t('home:selectMonth')}</h3>
                     <!-- Year Navigation -->
                     <div class="flex items-center justify-between mb-6">
                         <button id="prev-year" class="p-2 rounded-full hover:bg-wabi-bg/50 text-wabi-primary">
                             <i class="fa-solid fa-chevron-left"></i>
                         </button>
-                        <span id="current-year" class="text-xl font-bold text-wabi-primary">${selectedYear}年</span>
+                        <span id="current-year" class="text-xl font-bold text-wabi-primary">${t('home:yearSuffix', { year: selectedYear })}</span>
                         <button id="next-year" class="p-2 rounded-full hover:bg-wabi-bg/50 text-wabi-primary">
                             <i class="fa-solid fa-chevron-right"></i>
                         </button>
@@ -289,11 +290,11 @@ export class HomePage {
                         ${Array.from({ length: 12 }, (_, i) => {
                             const monthNum = i + 1;
                             const isActive = monthNum === selectedMonth ? 'bg-wabi-accent text-wabi-primary' : 'bg-wabi-surface text-wabi-text-primary';
-                            return `<button data-month="${monthNum}" class="month-btn p-3 rounded-lg font-medium ${isActive}">${monthNum}月</button>`;
+                            return `<button data-month="${monthNum}" class="month-btn p-3 rounded-lg font-medium ${isActive}">${t('home:monthSuffix', { month: monthNum })}</button>`;
                         }).join('')}
                     </div>
                     <div class="flex justify-end">
-                        <button id="cancel-month-year" class="px-6 bg-wabi-border hover:bg-wabi-border text-wabi-text-primary py-3 rounded-lg transition-colors">取消</button>
+                        <button id="cancel-month-year" class="px-6 bg-wabi-border hover:bg-wabi-border text-wabi-text-primary py-3 rounded-lg transition-colors">${t('home:cancel')}</button>
                     </div>
                 </div>
             `;
@@ -344,10 +345,10 @@ export class HomePage {
             const activeWidgets = order.filter(id => this.app.pluginManager.homeWidgets.has(id));
             const hiddenWidgets = this.app.pluginManager.hiddenWidgets;
 
-            if (activeWidgets.length === 0) return '<p class="text-center text-wabi-text-secondary py-4">無可用的小工具</p>';
+            if (activeWidgets.length === 0) return `<p class="text-center text-wabi-text-secondary py-4">${t('home:noWidgetsAvailable')}</p>`;
 
             return activeWidgets.map((id, index) => {
-                const name = this.app.pluginManager.getPluginName(id) || '未知小工具';
+                const name = this.app.pluginManager.getPluginName(id) || t('home:unknownWidget');
                 const isHidden = hiddenWidgets.includes(id);
                 const eyeIcon = isHidden ? 'fa-eye-slash' : 'fa-eye';
                 const eyeColor = isHidden ? 'text-wabi-text-secondary' : 'text-wabi-primary';
@@ -372,7 +373,7 @@ export class HomePage {
         modal.innerHTML = `
             <div class="bg-wabi-surface rounded-xl max-w-sm w-full p-6 shadow-xl transform transition-all scale-100 flex flex-col max-h-[80vh]">
                 <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-xl font-bold text-wabi-text-primary">調整顯示與順序</h3>
+                    <h3 class="text-xl font-bold text-wabi-text-primary">${t('home:adjustDisplayAndOrder')}</h3>
                     <button id="close-widget-modal" class="text-wabi-text-secondary hover:text-wabi-text-primary">
                         <i class="fa-solid fa-times text-xl"></i>
                     </button>
@@ -381,7 +382,7 @@ export class HomePage {
                     ${renderList()}
                 </div>
                 <div class="mt-auto pt-2 border-t border-wabi-border">
-                     <p class="text-xs text-center text-wabi-text-secondary">拖曳調整順序，點擊眼睛圖示切換顯示</p>
+                     <p class="text-xs text-center text-wabi-text-secondary">${t('home:dragToReorder')}</p>
                 </div>
             </div>
         `;

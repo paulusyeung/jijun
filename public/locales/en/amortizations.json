@@ -1,0 +1,35 @@
+{
+  "installment": "Installment",
+  "depreciation": "Depreciation",
+  "amortization": "Amortization",
+  "monthly": "Monthly",
+  "weekly": "Weekly",
+  "yearly": "Yearly",
+  "types": {
+    "installment": "Installment",
+    "depreciation": "Depreciation",
+    "amortization": "Amortization"
+  },
+  "statuses": {
+    "active": "In Progress",
+    "paused": "Paused",
+    "completed": "Completed"
+  },
+  "title": "Amortization Management",
+  "infoText": "Manage installments, asset depreciation and expense amortization. The system will automatically generate records.",
+  "empty": "No amortization items yet",
+  "overpaid": "Overpaid",
+  "uncategorized": "Uncategorized",
+  "interestRate": "Rate {{rate}}%",
+  "progress": "{{completed}}/{{periods}} periods complete",
+  "perPeriod": "${{amount}}/period",
+  "totalAmount": "Total",
+  "downPayment": "Down Payment",
+  "nextDue": "Next Due",
+  "pause": "Pause",
+  "resume": "Resume",
+  "paused": "Paused",
+  "resumed": "Resumed",
+  "deleted": "Deleted",
+  "confirmDeleteMessage": "Are you sure you want to delete \"{{name}}\"?\n\n⚠️ Already generated records will not be deleted."
+}

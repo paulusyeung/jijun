@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { Chart, registerables } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 import { zhTW } from 'date-fns/locale';
@@ -45,11 +46,11 @@ export class StatisticsManager {
 
                     <div class="mb-4">
 
-                        <label for="stats-account-filter" class="text-sm text-wabi-text-secondary">帳戶</label>
+                        <label for="stats-account-filter" class="text-sm text-wabi-text-secondary">${t('stats:account')}</label>
 
                         <select id="stats-account-filter" class="w-full mt-1 p-2 rounded-lg border-wabi-border bg-wabi-surface focus:ring-wabi-accent focus:border-wabi-accent">
 
-                            <option value="all">所有帳戶</option>
+                            <option value="all">${t('stats:allAccounts')}</option>
 
                             ${accountFilterOptions}
 
@@ -71,28 +72,28 @@ export class StatisticsManager {
 
                             <!-- Time Range Selector -->
             <div class="flex h-10 w-full items-center justify-center rounded-lg bg-gray-200/50 p-1 mb-6">
-                <button data-period="week" class="period-btn flex-1 h-full rounded-md px-2 text-sm font-medium text-wabi-text-secondary">週</button>
-                <button data-period="month" class="period-btn flex-1 h-full rounded-md px-2 text-sm font-medium bg-wabi-surface text-wabi-primary shadow-sm">月</button>
-                <button data-period="year" class="period-btn flex-1 h-full rounded-md px-2 text-sm font-medium text-wabi-text-secondary">年</button>
-                <button data-period="custom" class="period-btn flex-1 h-full rounded-md px-2 text-sm font-medium text-wabi-text-secondary">自訂</button>
+                <button data-period="week" class="period-btn flex-1 h-full rounded-md px-2 text-sm font-medium text-wabi-text-secondary">${t('stats:week')}</button>
+                <button data-period="month" class="period-btn flex-1 h-full rounded-md px-2 text-sm font-medium bg-wabi-surface text-wabi-primary shadow-sm">${t('stats:month')}</button>
+                <button data-period="year" class="period-btn flex-1 h-full rounded-md px-2 text-sm font-medium text-wabi-text-secondary">${t('stats:year')}</button>
+                <button data-period="custom" class="period-btn flex-1 h-full rounded-md px-2 text-sm font-medium text-wabi-text-secondary">${t('stats:custom')}</button>
             </div>
 
             <!-- Key Metric Cards -->
             <div class="grid grid-cols-2 gap-4 mb-8">
                 <div class="flex flex-col gap-1 rounded-xl bg-wabi-surface p-4 shadow-sm border border-wabi-border">
-                    <p class="text-sm font-medium text-wabi-text-secondary">總收入</p>
+                    <p class="text-sm font-medium text-wabi-text-secondary">${t('stats:totalIncome')}</p>
                     <p id="stats-total-income" class="text-xl font-bold tracking-tight text-wabi-income">$0</p>
                 </div>
                 <div class="flex flex-col gap-1 rounded-xl bg-wabi-surface p-4 shadow-sm border border-wabi-border">
-                    <p class="text-sm font-medium text-wabi-text-secondary">總支出</p>
+                    <p class="text-sm font-medium text-wabi-text-secondary">${t('stats:totalExpense')}</p>
                     <p id="stats-total-expense" class="text-xl font-bold tracking-tight text-wabi-expense">$0</p>
                 </div>
                 <div class="col-span-2 flex flex-col gap-1 rounded-xl bg-wabi-surface p-4 shadow-sm border border-wabi-border">
-                    <p class="text-sm font-medium text-wabi-text-secondary">結餘</p>
+                    <p class="text-sm font-medium text-wabi-text-secondary">${t('stats:netBalance')}</p>
                     <p id="stats-net-balance" class="text-2xl font-bold tracking-tight text-wabi-primary">$0</p>
                 </div>
                 <div id="stats-account-balance-card" class="col-span-2 flex flex-col gap-1 rounded-xl bg-wabi-surface p-4 shadow-sm border border-wabi-border hidden">
-                    <p class="text-sm font-medium text-wabi-text-secondary">帳戶餘額</p>
+                    <p class="text-sm font-medium text-wabi-text-secondary">${t('stats:accountBalance')}</p>
                     <p id="stats-account-balance" class="text-2xl font-bold tracking-tight text-wabi-primary">$0</p>
                 </div>
             </div>
@@ -100,8 +101,8 @@ export class StatisticsManager {
             <!-- Donut Chart: Expense Distribution -->
             <div class="rounded-xl bg-wabi-surface p-4 sm:p-6 shadow-sm border border-wabi-border mb-8">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-base font-bold text-wabi-primary">支出分佈</h2>
-                    <button id="stats-expense-group-toggle" class="text-xs px-2 py-1 rounded-lg border border-wabi-border text-wabi-text-secondary hover:bg-wabi-bg">依群組顯示</button>
+                    <h2 class="text-base font-bold text-wabi-primary">${t('stats:expenseDistribution')}</h2>
+                    <button id="stats-expense-group-toggle" class="text-xs px-2 py-1 rounded-lg border border-wabi-border text-wabi-text-secondary hover:bg-wabi-bg">${t('stats:byGroup')}</button>
                 </div>
                 <div id="stats-expense-donut-container" class="flex flex-col items-center gap-6 sm:flex-row">
                     <!-- Chart will be rendered here -->
@@ -111,8 +112,8 @@ export class StatisticsManager {
             <!-- Donut Chart: Income Distribution -->
             <div class="mb-8 rounded-xl bg-wabi-surface p-4 sm:p-6 shadow-sm border border-wabi-border">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-base font-bold text-wabi-primary">收入分佈</h2>
-                    <button id="stats-income-group-toggle" class="text-xs px-2 py-1 rounded-lg border border-wabi-border text-wabi-text-secondary hover:bg-wabi-bg">依群組顯示</button>
+                    <h2 class="text-base font-bold text-wabi-primary">${t('stats:incomeDistribution')}</h2>
+                    <button id="stats-income-group-toggle" class="text-xs px-2 py-1 rounded-lg border border-wabi-border text-wabi-text-secondary hover:bg-wabi-bg">${t('stats:byGroup')}</button>
                 </div>
                 <div id="stats-income-donut-container" class="flex flex-col items-center gap-6 sm:flex-row">
                     <!-- Chart will be rendered here -->
@@ -121,7 +122,7 @@ export class StatisticsManager {
 
             <!-- Line Chart: Income/Expense Trend -->
             <div class="rounded-xl bg-wabi-surface p-4 sm:p-6 shadow-sm border border-wabi-border mb-8">
-                <h2 class="text-base font-bold mb-4 text-wabi-primary">收支趨勢</h2>
+                <h2 class="text-base font-bold mb-4 text-wabi-primary">${t('stats:trend')}</h2>
                 <div class="relative h-48 w-full">
                     <canvas id="stats-trend-chart"></canvas>
                 </div>
@@ -130,7 +131,7 @@ export class StatisticsManager {
             <!-- Heatmap: Annual Expense Activity -->
             <div class="rounded-xl bg-wabi-surface p-4 sm:p-6 shadow-sm border border-wabi-border mb-8">
                 <h2 class="text-base font-bold mb-4 text-wabi-primary flex items-center gap-2">
-                    <i class="fa-solid fa-fire text-orange-500"></i> 年度消費熱力圖
+                    <i class="fa-solid fa-fire text-orange-500"></i> ${t('stats:heatmap')}
                 </h2>
                 <div class="overflow-x-auto pb-2">
                     <div id="stats-heatmap-container" class="min-w-[600px]">
@@ -138,21 +139,21 @@ export class StatisticsManager {
                     </div>
                 </div>
                 <div class="flex justify-end items-center gap-2 mt-2 text-xs text-wabi-text-secondary">
-                    <span>跟錢包過不去</span>
+                    <span>${t('stats:heatmapLow')}</span>
                     <div class="flex gap-1">
                         <div class="size-3 bg-wabi-expense opacity-25 rounded-sm"></div>
                         <div class="size-3 bg-wabi-expense opacity-50 rounded-sm"></div>
                         <div class="size-3 bg-wabi-expense opacity-75 rounded-sm"></div>
                         <div class="size-3 bg-wabi-expense opacity-100 rounded-sm"></div>
                     </div>
-                    <span>花錢如流水</span>
+                    <span>${t('stats:heatmapHigh')}</span>
                 </div>
             </div>
 
             <!-- Top Expenses List (New) -->
             <div class="rounded-xl bg-wabi-surface p-4 sm:p-6 shadow-sm border border-wabi-border mb-8">
                 <h2 class="text-base font-bold mb-4 text-wabi-primary flex items-center gap-2">
-                    <i class="fa-solid fa-ranking-star text-yellow-500"></i> 鉅額消費排行 (Top 5)
+                    <i class="fa-solid fa-ranking-star text-yellow-500"></i> ${t('stats:topExpenses')}
                 </h2>
                 <div id="stats-top-expenses-list" class="space-y-3">
                     <!-- List injected here -->
@@ -269,13 +270,13 @@ export class StatisticsManager {
         if (!container) return;
         
         if (topList.length === 0) {
-            container.innerHTML = '<p class="text-sm text-center text-wabi-text-secondary">無消費紀錄</p>';
+            container.innerHTML = `<p class="text-sm text-center text-wabi-text-secondary">${t('stats:noExpenseRecords')}</p>`;
             return;
         }
         
         container.innerHTML = topList.map((r, index) => {
             const category = this.categoryManager.getCategoryById('expense', r.category);
-            const categoryName = category ? category.name : (r.category === 'others' ? '其他' : r.category);
+            const categoryName = category ? category.name : (r.category === 'others' ? t('stats:others') : r.category);
             const icon = category ? category.icon : 'fa-solid fa-question';
             
             return `
@@ -321,7 +322,7 @@ export class StatisticsManager {
                 labels: labels,
                 datasets: [
                     {
-                        label: '收入',
+                        label: t('stats:income'),
                         data: incomeValues,
                         borderColor: '#6A9C89', // wabi-income
                         backgroundColor: '#6A9C8933',
@@ -329,7 +330,7 @@ export class StatisticsManager {
                         tension: 0.3,
                     },
                     {
-                        label: '支出',
+                        label: t('stats:expense'),
                         data: expenseValues,
                         borderColor: '#B95A5A', // wabi-expense
                         backgroundColor: '#B95A5A33',
@@ -398,7 +399,7 @@ export class StatisticsManager {
             if (!groupKey) {
                 const key = '__ungrouped';
                 if (!groupMap[key]) {
-                    const uncatGroup = grouped.find(g => g.group.id === null) || { group: { name: '未分類', icon: 'fas fa-question', color: 'bg-gray-300' } };
+                    const uncatGroup = grouped.find(g => g.group.id === null) || { group: { name: t('stats:uncategorized'), icon: 'fas fa-question', color: 'bg-gray-300' } };
                     groupMap[key] = {
                         id: key, name: uncatGroup.group.name,
                         icon: uncatGroup.group.icon, color: uncatGroup.group.color,
@@ -422,15 +423,15 @@ export class StatisticsManager {
 
         const toggle = this.container.querySelector(toggleBtnId);
         if (toggle) {
-            toggle.textContent = this.filters.groupMode ? '依分類顯示' : '依群組顯示';
+            toggle.textContent = this.filters.groupMode ? t('stats:byCategory') : t('stats:byGroup');
             toggle.classList.toggle('bg-wabi-primary/10', this.filters.groupMode);
             toggle.classList.toggle('text-wabi-primary', this.filters.groupMode);
         }
 
         const total = Object.values(rawData).reduce((a, b) => a + b, 0);
         if (total === 0) {
-            const label = type === 'expense' ? '支出' : '收入';
-            container.innerHTML = `<p class="text-center text-wabi-text-secondary py-8">此期間無${label}紀錄</p>`;
+            const label = type === 'expense' ? t('stats:expense') : t('stats:income');
+            container.innerHTML = `<p class="text-center text-wabi-text-secondary py-8">${t('stats:noRecordsInPeriod', { type: label })}</p>`;
             return;
         }
 
@@ -447,7 +448,7 @@ export class StatisticsManager {
                 .filter(id => !drillIds || drillIds.includes(id))
                 .map(id => {
                     const category = this.categoryManager.getCategoryById(type, id);
-                    return { id, name: category?.name || '其他', value: rawData[id], color: category?.color || 'bg-gray-400' };
+                    return { id, name: category?.name || t('stats:others'), value: rawData[id], color: category?.color || 'bg-gray-400' };
                 }).sort((a, b) => b.value - a.value);
         }
 
@@ -473,7 +474,7 @@ export class StatisticsManager {
             <div class="relative flex size-40 items-center justify-center sm:size-48">
                 <canvas id="${chartId.replace('#', '')}"></canvas>
                 <div class="absolute text-center">
-                    <p class="text-xs text-wabi-text-secondary">${type === 'expense' ? '總支出' : '總收入'}</p>
+                    <p class="text-xs text-wabi-text-secondary">${type === 'expense' ? t('stats:totalExpenseCenter') : t('stats:totalIncomeCenter')}</p>
                     <p class="text-lg font-bold text-wabi-primary">${formatCurrency(total)}</p>
                 </div>
             </div>
@@ -515,7 +516,7 @@ export class StatisticsManager {
         if (this.filters.groupMode && this._drillDownGroup) {
             const backBtn = document.createElement('button');
             backBtn.className = 'text-xs text-wabi-primary mt-2 flex items-center gap-1';
-            backBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> 返回群組總覽';
+            backBtn.innerHTML = `<i class="fa-solid fa-arrow-left"></i> ${t('stats:backToGroupOverview')}`;
             backBtn.addEventListener('click', () => {
                 this._drillDownGroup = null;
                 this._buildDonutChart(rawData, type, containerId, chartId, legendId, toggleBtnId);

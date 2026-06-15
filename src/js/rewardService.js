@@ -5,6 +5,7 @@
 // 獎勵：觀看獎勵廣告後，停止顯示橫幅廣告 24 小時
 // 設計原則：Adblocker 友善 — 所有廣告載入失敗時靜默降級，不影響主程式
 
+import { t } from './i18n.js';
 import { showToast } from './utils.js';
 
 // ── 常數設定 ──────────────────────────────────────────
@@ -213,7 +214,7 @@ export class RewardService {
         if (ms <= 0) return null;
         const hours = Math.floor(ms / (1000 * 60 * 60));
         const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
-        return `${hours} 小時 ${minutes} 分鐘`;
+        return t('common:format.hoursMinutes', { hours, minutes });
     }
 
     /** 設定無廣告期間 */
@@ -251,7 +252,7 @@ export class RewardService {
             container.innerHTML = `
                 <div class="text-center py-3 text-sm text-wabi-text-secondary">
                     <i class="fa-solid fa-heart text-wabi-expense mr-1"></i>
-                    感謝支持！無廣告模式剩餘 ${remaining}
+                    ${t('common:ad.rewardInfo', { remaining })}
                 </div>
             `;
             return;
@@ -329,7 +330,7 @@ export class RewardService {
         // 若已在無廣告期間，直接提示
         if (this.isAdFree()) {
             const remaining = this.formatRemaining();
-            showToast(`無廣告模式尚有 ${remaining}`, 'success');
+            showToast(t('common:ad.alreadyAdFree', { remaining }), 'success');
             return false;
         }
 
@@ -348,11 +349,11 @@ export class RewardService {
         const AdMob = this._admobModule;
 
         if (!AdMob || !this._admobInitialized) {
-            showToast('廣告系統尚未就緒，請稍後再試', 'error');
+            showToast(t('common:ad.notReady'), 'error');
             return false;
         }
 
-        showToast('正在載入獎勵廣告...', 'success');
+                    showToast(t('common:ad.loadingReward'), 'success');
 
         // 先註冊所有事件監聽，再 prepare + show
         // 避免 prepare 回傳後事件已經觸發但 listener 還沒註冊的 race condition
@@ -377,8 +378,8 @@ export class RewardService {
             // 30 秒逾時安全網
             const timeout = setTimeout(() => {
                 if (!resolved) {
-                    console.warn('獎勵廣告逾時');
-                    showToast('獎勵廣告載入逾時，請稍後再試', 'error');
+                    console.warn('Reward ad timeout');
+                    showToast(t('common:ad.rewardTimeout'), 'error');
                     safeResolve(false);
                 }
             }, 30000);
@@ -396,10 +397,10 @@ export class RewardService {
                     clearTimeout(timeout);
                     if (rewarded) {
                         this._grantAdFree();
-                        showToast('感謝觀看！已啟用 24 小時無廣告模式 🎉', 'success');
+                        showToast(t('common:ad.thanksForWatching'), 'success');
                         safeResolve(true);
                     } else {
-                        showToast('未完成觀看，無法獲得獎勵', 'error');
+                        showToast(t('common:ad.notCompleted'), 'error');
                         safeResolve(false);
                     }
                 }
@@ -410,8 +411,8 @@ export class RewardService {
                 'onRewardedVideoAdFailedToShow',
                 (error) => {
                     clearTimeout(timeout);
-                    console.error('獎勵廣告顯示失敗:', error);
-                    showToast('獎勵廣告顯示失敗，請稍後再試', 'error');
+                    console.error('Reward ad failed to show:', error);
+                    showToast(t('common:ad.showFailed'), 'error');
                     safeResolve(false);
                 }
             );
@@ -421,8 +422,8 @@ export class RewardService {
                 'onRewardedVideoAdFailedToLoad',
                 (error) => {
                     clearTimeout(timeout);
-                    console.error('獎勵廣告載入失敗:', error);
-                    showToast('獎勵廣告載入失敗，請稍後再試', 'error');
+                    console.error('Reward ad failed to load:', error);
+                    showToast(t('common:ad.loadFailed'), 'error');
                     safeResolve(false);
                 }
             );
@@ -438,8 +439,8 @@ export class RewardService {
                 await AdMob.showRewardVideoAd();
             } catch (e) {
                 clearTimeout(timeout);
-                console.error('獎勵廣告流程異常:', e);
-                showToast('獎勵廣告載入失敗，請稍後再試', 'error');
+                console.error('Reward ad flow error:', e);
+                showToast(t('common:ad.loadFailed'), 'error');
                 safeResolve(false);
             }
             };
@@ -495,7 +496,7 @@ export class RewardService {
                     }
 
                     // 顯示載入提示
-                    showToast('正在載入獎勵廣告...', 'success');
+        showToast(t('common:ad.loadingReward'), 'success');
 
                     // 定義獎勵廣告 slot
                     this._rewardedSlot = googletag.defineOutOfPageSlot(
@@ -529,10 +530,10 @@ export class RewardService {
 
                         if (this._rewardPayload) {
                             this._grantAdFree();
-                            showToast('感謝觀看！已啟用 24 小時無廣告模式 🎉', 'success');
+                            showToast(t('common:ad.thanksForWatching'), 'success');
                             this._resolveWithCleanup(true);
                         } else {
-                            showToast('未完成觀看，無法獲得獎勵', 'error');
+                            showToast(t('common:ad.notCompleted'), 'error');
                             this._resolveWithCleanup(false);
                         }
                     });
@@ -572,7 +573,7 @@ export class RewardService {
         // 載入推廣資料
         const ads = await loadInternalAds();
         if (!ads || ads.length === 0) {
-            showToast('目前沒有可用的獎勵廣告，請稍後再試', 'error');
+            showToast(t('common:ad.noAvailable'), 'error');
             return false;
         }
 
@@ -602,12 +603,12 @@ export class RewardService {
                     </a>
                     <div class="flex gap-3">
                         <button data-action="cancel" class="flex-1 py-2.5 border border-wabi-border rounded-lg text-wabi-text-secondary font-medium hover:bg-wabi-bg transition-colors">
-                            關閉
+                            ${t('common:ad.close')}
                         </button>
                         <button data-action="claim" disabled
                                 class="flex-1 py-2.5 rounded-lg text-white font-medium transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                                 style="background: ${ad.color}">
-                            <span data-countdown>等待 ${COUNTDOWN_SECONDS} 秒</span>
+                            <span data-countdown>${t('common:ad.waitSeconds', { count: COUNTDOWN_SECONDS })}</span>
                         </button>
                     </div>
                 </div>
@@ -624,11 +625,11 @@ export class RewardService {
             const timer = setInterval(() => {
                 remaining--;
                 if (remaining > 0) {
-                    countdownSpan.textContent = `等待 ${remaining} 秒`;
+                    countdownSpan.textContent = t('common:ad.waitSeconds', { count: remaining });
                 } else {
                     clearInterval(timer);
                     claimBtn.disabled = false;
-                    countdownSpan.textContent = '領取獎勵 🎉';
+                    countdownSpan.textContent = t('common:ad.claim');
                 }
             }, 1000);
 
@@ -639,7 +640,7 @@ export class RewardService {
                 clearInterval(timer);
                 modal.remove();
                 this._grantAdFree();
-                showToast('感謝支持！已啟用 24 小時無廣告模式 🎉', 'success');
+                showToast(t('common:ad.thanksSupport'), 'success');
                 resolve(true);
             });
 
@@ -664,16 +665,16 @@ export class RewardService {
                 <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-wabi-primary/10 flex items-center justify-center">
                     <i class="fa-solid fa-gift text-3xl text-wabi-primary"></i>
                 </div>
-                <h3 class="text-xl font-bold text-wabi-text-primary mb-2">觀看廣告獲得獎勵</h3>
+                <h3 class="text-xl font-bold text-wabi-text-primary mb-2">${t('common:ad.watchTitle')}</h3>
                 <p class="text-wabi-text-secondary text-sm mb-6">
-                    觀看一則短影片廣告，即可享受 <strong>24 小時無廣告</strong>體驗！
+                    ${t('common:ad.watchDesc')}
                 </p>
                 <div class="flex gap-3">
                     <button id="reward-cancel-btn" class="flex-1 py-2.5 border border-wabi-border rounded-lg text-wabi-text-secondary font-medium hover:bg-wabi-bg transition-colors">
-                        取消
+                        ${t('common:ad.cancel')}
                     </button>
                     <button id="reward-confirm-btn" class="flex-1 py-2.5 bg-wabi-primary text-wabi-surface rounded-lg font-medium hover:bg-wabi-primary/90 transition-colors">
-                        觀看廣告
+                        ${t('common:ad.watch')}
                     </button>
                 </div>
             </div>

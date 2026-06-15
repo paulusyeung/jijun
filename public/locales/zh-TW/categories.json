@@ -1,0 +1,19 @@
+{
+  "food": "飲食",
+  "life": "日常",
+  "traffic": "交通",
+  "fun": "娛樂",
+  "medi": "醫療",
+  "edu": "教育",
+  "debt_repayment": "還款",
+  "another": "其他",
+  "salary": "薪水",
+  "bonus": "獎金",
+  "pocket": "零用錢",
+  "parttime": "兼職",
+  "invest": "投資",
+  "interest": "利息",
+  "debt_collection": "欠款回收",
+  "another_income": "其他收入",
+  "unknown": "未知分類"
+}

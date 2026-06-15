@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { showToast, escAttr } from '../utils.js';
 
 export class StorePage {
@@ -14,12 +15,12 @@ export class StorePage {
                     </a>
                     <div class="flex-1 relative">
                         <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"></i>
-                        <input type="text" id="store-search" class="w-full pl-10 pr-4 py-2 bg-wabi-bg rounded-full outline-none focus:ring-2 focus:ring-wabi-primary transition-all placeholder-gray-400" placeholder="搜尋擴充功能...">
+                        <input type="text" id="store-search" class="w-full pl-10 pr-4 py-2 bg-wabi-bg rounded-full outline-none focus:ring-2 focus:ring-wabi-primary transition-all placeholder-gray-400" placeholder="${t('plugins:search_placeholder')}">
                     </div>
                 </header>
 
                 <div id="full-store-list" class="flex-1 overflow-y-auto space-y-3 pb-8">
-                     <div class="text-center py-12 text-wabi-text-secondary animate-pulse">載入中...</div>
+                     <div class="text-center py-12 text-wabi-text-secondary animate-pulse">${t('common:messages.loading')}</div>
                 </div>
             </div>
         `;
@@ -44,14 +45,14 @@ export class StorePage {
                 });
             }
         } catch(e) {
-             document.getElementById('full-store-list').innerHTML = `<div class="text-center py-12 text-red-500">無法載入商店資料</div>`;
+             document.getElementById('full-store-list').innerHTML = `<div class="text-center py-12 text-red-500">${t('plugins:store_load_error')}</div>`;
         }
     }
 
     renderStoreList(list, installedPlugins) {
         const container = document.getElementById('full-store-list');
         if (list.length === 0) {
-            container.innerHTML = `<div class="text-center py-12 text-gray-400">沒有找到相關插件</div>`;
+            container.innerHTML = `<div class="text-center py-12 text-gray-400">${t('plugins:no_search_results')}</div>`;
             return;
         }
 
@@ -61,12 +62,12 @@ export class StorePage {
 
              if (installed) {
                  if (this.app.pluginManager.compareVersions(p.version, installed.version) > 0) {
-                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-yellow-500 text-white hover:bg-yellow-600 shadow" data-url="${escAttr(p.file)}" data-id="${escAttr(p.id)}">更新 (v${escAttr(p.version)})</button>`;
+                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-yellow-500 text-white hover:bg-yellow-600 shadow" data-url="${escAttr(p.file)}" data-id="${escAttr(p.id)}">${t('plugins:update_version', { version: p.version })}</button>`;
                  } else {
-                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-green-100 text-green-700 cursor-default" disabled>已安裝</button>`;
+                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-green-100 text-green-700 cursor-default" disabled>${t('plugins:installed')}</button>`;
                  }
              } else {
-                 btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow" data-url="${escAttr(p.file)}" data-id="${escAttr(p.id)}">安裝</button>`;
+                 btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow" data-url="${escAttr(p.file)}" data-id="${escAttr(p.id)}">${t('plugins:install')}</button>`;
              }
 
              return `
@@ -78,7 +79,7 @@ export class StorePage {
                             <div>
                                 <h4 class="font-bold text-wabi-text-primary text-lg">${escAttr(p.name)}</h4>
                                 <p class="text-sm text-wabi-text-secondary line-clamp-1">${escAttr(p.description)}</p>
-                                <p class="text-xs text-wabi-text-secondary mt-1">v${escAttr(p.version)} • ${escAttr(p.author || 'Unknown')}</p>
+                                <p class="text-xs text-wabi-text-secondary mt-1">v${escAttr(p.version)} • ${escAttr(p.author || t('plugins:unknown_author'))}</p>
                             </div>
                         </div>
                         ${btnHtml}
@@ -92,7 +93,7 @@ export class StorePage {
                 btn.addEventListener('click', async () => {
                     const originalText = btn.innerHTML;
                     btn.disabled = true;
-                    btn.textContent = '下載中...';
+                    btn.textContent = t('plugins:downloading');
 
                     try {
                         const response = await fetch(btn.dataset.url);
@@ -101,7 +102,7 @@ export class StorePage {
                         // 找到對應的商店插件資訊，傳入權限與 icon
                         const matchedPlugin = list.find(sp => sp.id === btn.dataset.id);
                         await this.app.pluginManager.installPlugin(file, matchedPlugin || null);
-                        showToast('安裝成功！', 'success');
+                        showToast(t('plugins:install_success'), 'success');
 
                         // Updates UI
                         // Fetch latest status
@@ -109,9 +110,9 @@ export class StorePage {
                         this.render(); // Re-render store page
                     } catch (e) {
                         console.error(e);
-                        if (e.message !== '使用者取消安裝' && e.message !== '使用者取消更新') {
-                            showToast('安裝失敗', 'error');
-                        }
+if (e.message !== '使用者取消安裝' && e.message !== '使用者取消更新') {
+                             showToast(t('plugins:install_failed'), 'error');
+                         }
                         btn.disabled = false;
                         btn.innerHTML = originalText;
                     }

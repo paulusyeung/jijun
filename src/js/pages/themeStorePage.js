@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { showToast, escAttr } from '../utils.js';
 
 export class ThemeStorePage {
@@ -12,11 +13,11 @@ export class ThemeStorePage {
                     <a href="#themes" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-wabi-bg text-wabi-text-secondary transition-colors">
                         <i class="fa-solid fa-chevron-left text-xl"></i>
                     </a>
-                    <h1 class="text-xl font-bold text-wabi-text-primary flex-1">主題商店</h1>
+                    <h1 class="text-xl font-bold text-wabi-text-primary flex-1">${t('plugins:theme_store_title')}</h1>
                 </header>
 
                 <div id="theme-store-list" class="flex-1 overflow-y-auto space-y-4 pb-8">
-                     <div class="text-center py-12 text-wabi-text-secondary animate-pulse">載入中...</div>
+                     <div class="text-center py-12 text-wabi-text-secondary animate-pulse">${t('common:messages.loading')}</div>
                 </div>
             </div>
         `;
@@ -33,14 +34,14 @@ export class ThemeStorePage {
             }
         } catch(e) {
              console.error(e);
-             document.getElementById('theme-store-list').innerHTML = `<div class="text-center py-12 text-red-500">無法載入商店資料</div>`;
+             document.getElementById('theme-store-list').innerHTML = `<div class="text-center py-12 text-red-500">${t('plugins:store_load_error')}</div>`;
         }
     }
 
     renderStoreList(list, installedThemes) {
         const container = document.getElementById('theme-store-list');
         if (list.length === 0) {
-            container.innerHTML = `<div class="text-center py-12 text-wabi-text-secondary">目前沒有可用的主題</div>`;
+            container.innerHTML = `<div class="text-center py-12 text-wabi-text-secondary">${t('plugins:no_themes_available')}</div>`;
             return;
         }
 
@@ -50,12 +51,12 @@ export class ThemeStorePage {
 
              if (installed) {
                  if (this.app.pluginManager.compareVersions(t.version, installed.version) > 0) {
-                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-yellow-500 text-wabi-surface hover:bg-yellow-600 shadow w-full mt-3" data-url="${escAttr(t.file)}">更新 (v${escAttr(t.version)})</button>`;
+                      btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-yellow-500 text-wabi-surface hover:bg-yellow-600 shadow w-full mt-3" data-url="${escAttr(t.file)}">${t('plugins:update_version', { version: t.version })}</button>`;
                  } else {
-                      btnHtml = `<button class="px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-green-100 text-green-700 cursor-default w-full mt-3" disabled>已安裝</button>`;
+                      btnHtml = `<button class="px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-green-100 text-green-700 cursor-default w-full mt-3" disabled>${t('plugins:installed')}</button>`;
                  }
              } else {
-                 btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow w-full mt-3" data-url="${escAttr(t.file)}">下載</button>`;
+                 btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow w-full mt-3" data-url="${escAttr(t.file)}">${t('plugins:download')}</button>`;
              }
 
              // Color Preview Blocks
@@ -85,7 +86,7 @@ export class ThemeStorePage {
                             ${thumbnailHtml}
                             <div class="min-w-0">
                                 <h4 class="font-bold text-wabi-text-primary text-lg">${escAttr(t.name)}</h4>
-                                <p class="text-xs text-wabi-text-secondary">v${escAttr(t.version)} • ${escAttr(t.author || 'Unknown')}</p>
+                                <p class="text-xs text-wabi-text-secondary">v${escAttr(t.version)} • ${escAttr(t.author || t('plugins:unknown_author'))}</p>
                                 <p class="text-sm text-wabi-text-secondary mt-1">${escAttr(t.description)}</p>
                             </div>
                         </div>
@@ -100,7 +101,7 @@ export class ThemeStorePage {
             btn.addEventListener('click', async () => {
                 const originalText = btn.innerHTML;
                 btn.disabled = true;
-                btn.textContent = '下載中...';
+                btn.textContent = t('plugins:downloading');
 
                 try {
                     const response = await fetch(btn.dataset.url);
@@ -108,13 +109,13 @@ export class ThemeStorePage {
                     const themeData = await response.json();
 
                     await this.app.dataService.installTheme(themeData);
-                    showToast('下載成功！可以到主題列表套用', 'success');
+                    showToast(t('plugins:download_success'), 'success');
 
                     // Refresh
                     this.render();
                 } catch (e) {
                     console.error(e);
-                    showToast('下載失敗', 'error');
+                    showToast(t('plugins:download_failed'), 'error');
                     btn.disabled = false;
                     btn.innerHTML = originalText;
                 }

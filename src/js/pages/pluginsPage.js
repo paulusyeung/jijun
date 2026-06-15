@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { showToast, customConfirm } from '../utils.js';
 
 export class PluginsPage {
@@ -15,21 +16,21 @@ export class PluginsPage {
                     <a href="#settings" class="text-wabi-text-secondary hover:text-wabi-primary">
                         <i class="fa-solid fa-chevron-left text-xl"></i>
                     </a>
-                    <h1 class="text-xl font-bold text-wabi-primary">擴充功能商店</h1>
+                    <h1 class="text-xl font-bold text-wabi-primary">${t('plugins:title')}</h1>
                     <div class="w-8"></div>
                 </div>
 
                 <!-- Store Section -->
-                 <h3 class="font-bold text-wabi-primary mb-3">推薦擴充</h3>
+                 <h3 class="font-bold text-wabi-primary mb-3">${t('plugins:recommended')}</h3>
                  <div id="store-list-container" class="space-y-3 mb-8">
-                    <div class="text-center py-4 text-wabi-text-secondary animate-pulse">
-                        載入中...
-                    </div>
+<div class="text-center py-4 text-wabi-text-secondary animate-pulse">
+                        ${t('common:messages.loading')}
+                     </div>
                  </div>
 
                 <!-- Custom Pages List -->
                 ${this.app.pluginManager.customPages.size > 0 ? `
-                    <h3 class="font-bold text-wabi-primary mb-3">已安裝應用程式</h3>
+                    <h3 class="font-bold text-wabi-primary mb-3">${t('plugins:installed_apps')}</h3>
                     <div class="space-y-3 mb-6">
                         ${Array.from(this.app.pluginManager.customPages.entries()).map(([route, page]) => `
                             <a href="#${route}" class="block bg-wabi-surface p-4 rounded-xl border border-wabi-border flex justify-between items-center hover:bg-wabi-bg">
@@ -44,18 +45,18 @@ export class PluginsPage {
                 ` : ''}
 
                 <!-- Plugin List -->
-                <h3 class="font-bold text-wabi-primary mb-3">已安裝插件模組</h3>
+                <h3 class="font-bold text-wabi-primary mb-3">${t('plugins:installed_plugins')}</h3>
                 <div id="plugin-list-container" class="space-y-3">
                     ${plugins.length === 0 ? `
                         <div class="text-center py-8 text-wabi-text-secondary">
                             <i class="fa-solid fa-puzzle-piece text-4xl mb-3 opacity-30"></i>
-                            <p>尚未安裝任何擴充功能</p>
+                            <p>${t('plugins:no_plugins')}</p>
                         </div>
                     ` : plugins.map(p => `
                         <div class="bg-wabi-surface p-4 rounded-xl border border-wabi-border flex justify-between items-center">
                             <div>
                                 <h4 class="font-bold text-wabi-text-primary">${p.name} <span class="text-xs text-wabi-text-secondary font-normal">v${p.version}</span></h4>
-                                <p class="text-xs text-wabi-text-secondary mt-1">${p.description || '無描述'}</p>
+                                <p class="text-xs text-wabi-text-secondary mt-1">${p.description || t('plugins:no_description')}</p>
                             </div>
                             <button class="delete-plugin-btn text-wabi-expense p-2" data-id="${p.id}">
                                 <i class="fa-solid fa-trash-can"></i>
@@ -80,22 +81,22 @@ export class PluginsPage {
                     if (installed) {
                         if (this.app.pluginManager.compareVersions(p.version, installed.version) > 0) {
                              // Update available
-                             btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-yellow-500 text-white hover:bg-yellow-600 shadow"
-                                data-url="${p.file}" data-id="${p.id}">
-                                更新 (v${p.version})
-                            </button>`;
+btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-yellow-500 text-white hover:bg-yellow-600 shadow"
+                                 data-url="${p.file}" data-id="${p.id}">
+                                 ${t('plugins:update_version', { version: p.version })}
+                             </button>`;
                         } else {
                              // Already installed & up to date
-                             btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-green-100 text-green-700 cursor-default" disabled>
-                                已安裝
-                            </button>`;
+btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-green-100 text-green-700 cursor-default" disabled>
+                                 ${t('plugins:installed')}
+                             </button>`;
                         }
                     } else {
                         // Not installed
-                        btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow"
-                            data-url="${p.file}" data-id="${p.id}">
-                            安裝
-                        </button>`;
+btnHtml = `<button class="store-install-btn px-4 py-2 rounded-lg font-bold text-sm transition-all whitespace-nowrap shrink-0 bg-wabi-primary text-wabi-surface hover:bg-opacity-90 shadow"
+                             data-url="${p.file}" data-id="${p.id}">
+                             ${t('plugins:install')}
+                         </button>`;
                     }
 
                     return `
@@ -116,7 +117,7 @@ export class PluginsPage {
                 if (storePlugins.length > 3) {
                     storeContainer.innerHTML += `
                         <a href="#store" class="block w-full py-3 text-center text-wabi-primary font-bold bg-wabi-primary/5 rounded-xl hover:bg-wabi-primary/10 transition-colors mt-3">
-                            查看更多擴充功能 (${storePlugins.length})
+                            ${t('plugins:view_more', { count: storePlugins.length })}
                         </a>
                     `;
                 }
@@ -126,7 +127,7 @@ export class PluginsPage {
                     if (!btn.disabled) {
                         btn.addEventListener('click', async () => {
                             btn.disabled = true;
-                            btn.textContent = '下載中...';
+                            btn.textContent = t('plugins:downloading');
                             try {
                                 const response = await fetch(`${btn.dataset.url}?t=${Date.now()}`);
                                 const script = await response.text();
@@ -134,32 +135,32 @@ export class PluginsPage {
                                 // 找到對應的商店插件資訊，傳入權限與 icon
                                 const matchedPlugin = storePlugins.find(sp => sp.id === btn.dataset.id);
                                 await this.app.pluginManager.installPlugin(file, matchedPlugin || null);
-                                showToast('安裝成功！', 'success');
+                                showToast(t('plugins:install_success'), 'success');
                                 this.render();
                             } catch (e) {
                                 console.error(e);
-                                if (e.message !== '使用者取消安裝' && e.message !== '使用者取消更新') {
-                                    showToast('安裝失敗', 'error');
-                                }
+if (e.message !== '使用者取消安裝' && e.message !== '使用者取消更新') {
+                                     showToast(t('plugins:install_failed'), 'error');
+                                 }
                                 btn.disabled = false;
-                                btn.textContent = '安裝';
+                                btn.textContent = t('plugins:install');
                             }
                         });
                     }
                 });
 
             } else {
-                 document.getElementById('store-list-container').innerHTML = '<p class="text-center text-red-500">無法載入商店列表</p>';
+                 document.getElementById('store-list-container').innerHTML = `<p class="text-center text-red-500">${t('plugins:store_load_error')}</p>`;
             }
         } catch (e) {
             console.error(e);
-             document.getElementById('store-list-container').innerHTML = '<p class="text-center text-red-500">無法連結至商店</p>';
+             document.getElementById('store-list-container').innerHTML = `<p class="text-center text-red-500">${t('plugins:store_connect_error')}</p>`;
         }
 
         // Handle Delete
         document.querySelectorAll('.delete-plugin-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (await customConfirm('確定要移除此擴充功能嗎？')) {
+                if (await customConfirm(t('plugins:confirm_delete'))) {
                     await this.app.pluginManager.uninstallPlugin(btn.dataset.id);
                     this.render();
                 }

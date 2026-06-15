@@ -1,0 +1,35 @@
+{
+  "installment": "分期付款",
+  "depreciation": "折旧",
+  "amortization": "摊提",
+  "monthly": "每月",
+  "weekly": "每周",
+  "yearly": "每年",
+  "types": {
+    "installment": "分期付款",
+    "depreciation": "折旧",
+    "amortization": "摊提"
+  },
+  "statuses": {
+    "active": "进行中",
+    "paused": "已暂停",
+    "completed": "已完成"
+  },
+  "title": "摊提/分期管理",
+  "infoText": "管理分期付款、资产折旧、费用摊提，系统会依设定自动记帐。",
+  "empty": "尚无摊提/分期项目",
+  "overpaid": "已溢缴",
+  "uncategorized": "未分类",
+  "interestRate": "利率 {{rate}}%",
+  "progress": "已完成 {{completed}}/{{periods}} 期",
+  "perPeriod": "每期 ${{amount}}",
+  "totalAmount": "总额",
+  "downPayment": "首付",
+  "nextDue": "下期",
+  "pause": "暂停",
+  "resume": "恢复",
+  "paused": "已暂停",
+  "resumed": "已恢复",
+  "deleted": "已删除",
+  "confirmDeleteMessage": "确定要删除「{{name}}」吗？\n\n⚠️ 已产生的记帐纪录不会被删除。"
+}

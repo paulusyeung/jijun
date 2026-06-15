@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-    <title>輕鬆記帳 2.0</title>
+    <title data-i18n="appNameFull">輕鬆記帳 2.0</title>
     
     <meta name="description" content="這是一個簡單、實用的網頁記帳程式，打開網頁，便可以開始記帳，且資料皆儲存於裝置上，不用擔心外流。本網頁使用了PWA技術，讓使用者在需要時，可將這個網頁像APP一樣安裝到裝置上。">
     <meta name="keywords" content="記帳, 網頁, PWA, 網頁程式, 漸進式網頁程式, 輕鬆記帳, 網頁記帳, 網頁帳本">
@@ -112,7 +112,7 @@
     <nav id="bottom-nav" class="fixed bottom-0 left-0 right-0 bg-wabi-surface/95 backdrop-blur-md border-t border-wabi-border h-20 z-40 flex justify-around items-center md:top-0 md:w-64 md:h-screen md:flex-col md:justify-start md:border-t-0 md:border-r md:pt-8 md:items-stretch md:overflow-y-auto">
         <div class="hidden md:flex items-center justify-center mb-4 px-4">
             <img src="icon/icon.png" alt="輕鬆記帳" class="w-8 h-8 mr-2 rounded-lg shadow-sm">
-            <h1 class="text-xl font-bold text-wabi-primary">輕鬆記帳 2.0</h1>
+            <h1 class="text-xl font-bold text-wabi-primary" data-i18n="appNameFull">輕鬆記帳 2.0</h1>
         </div>
         <!-- 帳本切換器（桌面版側邊欄） -->
         <div class="hidden md:block px-4 mb-4">
@@ -126,32 +126,32 @@
         </div>
         <a href="#home" data-page="home" class="nav-item flex flex-col items-center justify-center text-wabi-text-secondary w-full h-full md:flex-row md:justify-start md:items-center md:h-auto md:py-4 md:px-8 hover:bg-black/5">
             <i class="fa-solid fa-house text-xl md:w-6 md:text-center"></i>
-            <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium">首頁</span>
+            <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium" data-i18n="nav.home">首頁</span>
         </a>
         <a href="#records" data-page="records" class="nav-item flex flex-col items-center justify-center text-wabi-text-secondary w-full h-full md:flex-row md:justify-start md:items-center md:h-auto md:py-4 md:px-8 hover:bg-black/5">
             <i class="fa-solid fa-list-ul text-xl md:w-6 md:text-center"></i>
-            <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium">明細</span>
+            <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium" data-i18n="nav.records">明細</span>
         </a>
         <a href="#add" data-page="add" class="nav-item flex flex-col items-center justify-center text-wabi-text-secondary w-full h-full md:flex-row md:justify-start md:items-center md:h-auto md:py-3 md:px-8 md:my-2 hover:bg-black/5">
             <div class="flex items-center justify-center w-14 h-14 rounded-full bg-wabi-accent text-wabi-primary shadow-lg -mt-8 md:mt-0 md:w-full md:h-12 md:rounded-xl md:shadow-md">
                 <i class="fa-solid fa-plus text-2xl md:text-xl"></i>
-                <span class="hidden md:inline ml-2 font-bold text-base">新增紀錄</span>
+                <span class="hidden md:inline ml-2 font-bold text-base" data-i18n="nav.add">新增紀錄</span>
             </div>
         </a>
         <a href="#stats" data-page="stats" class="nav-item flex flex-col items-center justify-center text-wabi-text-secondary w-full h-full md:flex-row md:justify-start md:items-center md:h-auto md:py-4 md:px-8 hover:bg-black/5">
             <i class="fa-solid fa-chart-pie text-xl md:w-6 md:text-center"></i>
-            <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium">統計</span>
+            <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium" data-i18n="nav.stats">統計</span>
         </a>
         <a href="#settings" data-page="settings" class="nav-item flex flex-col items-center justify-center text-wabi-text-secondary w-full h-full md:flex-row md:justify-start md:items-center md:h-auto md:py-4 md:px-8 hover:bg-black/5">
             <i class="fa-solid fa-gear text-xl md:w-6 md:text-center"></i>
-            <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium">設定</span>
+            <span class="text-xs mt-1 md:mt-0 md:ml-4 md:text-base font-medium" data-i18n="nav.settings">設定</span>
         </a>
         <div class="hidden md:flex mt-auto pb-4 pt-8 px-8 flex-col text-wabi-text-secondary text-xs opacity-70">
-            <span id="sidebar-version-info" class="cursor-default">版本讀取中...</span>
+            <span id="sidebar-version-info" class="cursor-default" data-i18n="messages.loading">版本讀取中...</span>
             <div class="mt-1.5 flex flex-wrap gap-x-2 gap-y-1">
-                <a href="#privacy" class="hover:underline">隱私權政策</a>
+                <a href="#privacy" class="hover:underline" data-i18n="common.privacy">隱私權政策</a>
                 <span>•</span>
-                <a href="#license" class="hover:underline">授權條款</a>
+                <a href="#license" class="hover:underline" data-i18n="common.license">授權條款</a>
             </div>
             <span class="mt-1.5 cursor-default">&copy; 2025 The walking fish 步行魚</span>
         </div>

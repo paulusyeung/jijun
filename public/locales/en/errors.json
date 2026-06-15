@@ -1,0 +1,22 @@
+{
+  "generic": "An error occurred",
+  "network": "Network error, please try again",
+  "validation": {
+    "required": "This field is required",
+    "invalidAmount": "Please enter a valid amount",
+    "invalidDate": "Please enter a valid date",
+    "maxLength": "Maximum {{max}} characters allowed"
+  },
+  "db": {
+    "read": "Failed to read data",
+    "write": "Failed to save data",
+    "delete": "Failed to delete data"
+  },
+  "sync": {
+    "failed": "Sync failed",
+    "conflict": "Data conflict detected",
+    "offline": "No internet connection"
+  },
+  "pageLoadFailed": "Page failed to load",
+  "pageLoadError": "An error occurred while loading the page"
+}

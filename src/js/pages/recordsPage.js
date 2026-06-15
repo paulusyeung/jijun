@@ -1,4 +1,5 @@
 import { RecordsListManager } from '../recordsList.js';
+import { t } from '../i18n.js';
 
 export class RecordsPage {
     constructor(app) {
@@ -22,33 +23,33 @@ export class RecordsPage {
                 <!-- Search Bar -->
                 <div class="mb-4 relative">
                     <i class="fa-solid fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-wabi-text-secondary"></i>
-                    <input type="text" id="records-search-input" class="w-full pl-10 pr-4 py-2 bg-wabi-surface border border-wabi-border rounded-lg outline-none focus:ring-2 focus:ring-wabi-primary transition-all text-wabi-text-primary text-sm placeholder-gray-400" placeholder="搜尋紀錄備註或金額...">
+                    <input type="text" id="records-search-input" class="w-full pl-10 pr-4 py-2 bg-wabi-surface border border-wabi-border rounded-lg outline-none focus:ring-2 focus:ring-wabi-primary transition-all text-wabi-text-primary text-sm placeholder-gray-400" placeholder="${t('records:searchPlaceholder')}">
                 </div>
 
                 <!-- Period Filter (Date Filter) - New Row -->
                 <div id="records-period-filter" class="flex h-10 w-full items-center justify-center rounded-lg bg-gray-200/50 p-1 mb-4">
-                    <button data-period="week" class="period-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">週</button>
-                    <button data-period="month" class="period-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium bg-wabi-surface text-wabi-primary shadow-sm">月</button>
-                    <button data-period="year" class="period-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">年</button>
-                    <button data-period="custom" class="period-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">自訂</button>
+                    <button data-period="week" class="period-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">${t('records:week')}</button>
+                    <button data-period="month" class="period-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium bg-wabi-surface text-wabi-primary shadow-sm">${t('records:month')}</button>
+                    <button data-period="year" class="period-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">${t('records:year')}</button>
+                    <button data-period="custom" class="period-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">${t('records:custom')}</button>
                 </div>
 
                 <!-- Type & Category Filters -->
                 <div class="flex gap-2 py-2 overflow-x-auto">
                     <div id="records-type-filter" class="flex items-center justify-center rounded-lg bg-gray-200/50 p-1">
-                        <button data-type="all" class="type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium bg-wabi-surface text-wabi-primary shadow-sm">全部</button>
-                        <button data-type="expense" class="type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">支出</button>
-                        <button data-type="income" class="type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">收入</button>
+                        <button data-type="all" class="type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium bg-wabi-surface text-wabi-primary shadow-sm">${t('records:all')}</button>
+                        <button data-type="expense" class="type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">${t('records:expense')}</button>
+                        <button data-type="income" class="type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">${t('records:income')}</button>
                     </div>
                     <button id="records-category-filter-btn" class="h-9 shrink-0 flex items-center justify-center gap-x-1.5 rounded-full bg-wabi-surface px-4 border border-wabi-border">
-                        <p class="text-wabi-text-primary text-sm font-medium leading-normal">類別</p>
+                        <p class="text-wabi-text-primary text-sm font-medium leading-normal">${t('records:category')}</p>
                         <i class="fa-solid fa-chevron-down text-xs text-wabi-text-secondary"></i>
                     </button>
                     <select id="records-group-filter" class="h-9 shrink-0 rounded-full bg-wabi-surface px-3 border border-wabi-border text-sm text-wabi-text-primary outline-none focus:ring-2 focus:ring-wabi-primary/50">
-                        <option value="">所有群組</option>
+                        <option value="">${t('records:allGroups')}</option>
                     </select>
                     <button id="records-account-filter-btn" class="h-9 shrink-0 flex items-center justify-center gap-x-1.5 rounded-full bg-wabi-surface px-4 border border-wabi-border hidden">
-                        <p class="text-wabi-text-primary text-sm font-medium leading-normal">帳戶</p>
+                        <p class="text-wabi-text-primary text-sm font-medium leading-normal">${t('records:account')}</p>
                         <i class="fa-solid fa-chevron-down text-xs text-wabi-text-secondary"></i>
                     </button>
                 </div>
@@ -56,15 +57,15 @@ export class RecordsPage {
                 <!-- Summary Cards -->
                 <div class="grid grid-cols-3 gap-3 my-4">
                     <div class="bg-wabi-surface p-3 rounded-lg shadow-sm border border-wabi-border text-center">
-                        <div class="text-sm text-wabi-text-secondary">筆數</div>
+                        <div class="text-sm text-wabi-text-secondary">${t('records:count')}</div>
                         <div id="record-count" class="text-lg font-bold text-wabi-primary">0</div>
                     </div>
                     <div class="bg-wabi-surface p-3 rounded-lg shadow-sm border border-wabi-border text-center">
-                        <div class="text-sm text-wabi-income">收入</div>
+                        <div class="text-sm text-wabi-income">${t('records:income')}</div>
                         <div id="total-income" class="text-lg font-bold text-wabi-income">$0</div>
                     </div>
                     <div class="bg-wabi-surface p-3 rounded-lg shadow-sm border border-wabi-border text-center">
-                        <div class="text-sm text-wabi-expense">支出</div>
+                        <div class="text-sm text-wabi-expense">${t('records:expense')}</div>
                         <div id="total-expense" class="text-lg font-bold text-wabi-expense">$0</div>
                     </div>
                 </div>

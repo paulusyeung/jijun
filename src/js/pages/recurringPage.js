@@ -1,4 +1,5 @@
 import { formatCurrency, showToast, formatDateToString, escapeHTML, customConfirm } from '../utils.js';
+import { t } from '../i18n.js';
 
 export class RecurringPage {
     constructor(app) {
@@ -14,13 +15,13 @@ export class RecurringPage {
                     <a href="#settings" class="text-wabi-text-secondary hover:text-wabi-primary">
                         <i class="fa-solid fa-chevron-left text-xl"></i>
                     </a>
-                    <h1 class="text-xl font-bold text-wabi-primary">週期性交易</h1>
+                    <h1 class="text-xl font-bold text-wabi-primary">${t('recurring:title')}</h1>
                     <div class="w-6"></div> <!-- Placeholder for alignment -->
                 </div>
 
                 <!-- Recurring Transaction List -->
                 <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-lg font-bold text-wabi-primary">已設定項目</h3>
+                    <h3 class="text-lg font-bold text-wabi-primary">${t('recurring:subtitle')}</h3>
                     <button id="add-recurring-btn" class="bg-wabi-primary text-wabi-surface rounded-full w-8 h-8 flex items-center justify-center">
                         <i class="fa-solid fa-plus"></i>
                     </button>
@@ -40,7 +41,7 @@ export class RecurringPage {
         container.innerHTML = '';
 
         if (recurringTxs.length === 0) {
-            container.innerHTML = `<p class="text-center text-wabi-text-secondary py-8">尚未建立任何週期性交易</p>`;
+            container.innerHTML = `<p class="text-center text-wabi-text-secondary py-8">${t('recurring:emptyState')}</p>`;
             // Still need to set up the add button listener
         } else {
             for (const tx of recurringTxs) {
@@ -49,7 +50,7 @@ export class RecurringPage {
                 txEl.innerHTML = `
                     <div>
                         <p class="font-medium text-wabi-text-primary">${escapeHTML(tx.description)}</p>
-                        <p class="text-sm text-wabi-text-secondary">金額: ${formatCurrency(tx.amount)} | 下次日期: ${tx.nextDueDate}</p>
+                        <p class="text-sm text-wabi-text-secondary">${t('recurring:amountLabel')}${formatCurrency(tx.amount)} | ${t('recurring:nextDateLabel')}${tx.nextDueDate}</p>
                     </div>
                     <div class="flex gap-2">
                         <button class="edit-recurring-btn" data-id="${tx.id}"><i class="fa-solid fa-pen text-wabi-text-secondary"></i></button>
@@ -78,9 +79,9 @@ export class RecurringPage {
         pageElement.querySelectorAll('.delete-recurring-btn').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const txId = parseInt(e.currentTarget.dataset.id, 10);
-                if (await customConfirm('確定要刪除此週期性交易嗎？')) {
+                if (await customConfirm(t('recurring:toastConfirmDelete'))) {
                     await this.app.dataService.deleteRecurringTransaction(txId);
-                    showToast('已刪除週期性交易');
+                    showToast(t('recurring:toastDeleted'));
                     this.render();
                 }
             });
@@ -105,88 +106,88 @@ export class RecurringPage {
 
         modal.innerHTML = `
             <div class="bg-wabi-bg rounded-lg max-w-sm w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-                <h3 class="text-lg font-bold text-wabi-primary">${isEdit ? '編輯' : '新增'}週期性交易</h3>
+                <h3 class="text-lg font-bold text-wabi-primary">${t(isEdit ? 'recurring:editTitle' : 'recurring:addTitle')}</h3>
 
                 <div>
-                    <label class="text-sm">描述</label>
+                    <label class="text-sm">${t('recurring:description')}</label>
                     <input type="text" id="recurring-desc" value="${txToEdit ? escapeHTML(txToEdit.description) : ''}" class="w-full mt-1 p-2 rounded-lg border-wabi-border bg-wabi-surface">
                 </div>
 
                 <div>
-                    <label class="text-sm">金額</label>
+                    <label class="text-sm">${t('recurring:amount')}</label>
                     <input type="number" id="recurring-amount" value="${txToEdit?.amount || ''}" class="w-full mt-1 p-2 rounded-lg border-wabi-border bg-wabi-surface">
                 </div>
 
                 <div>
-                    <label class="text-sm">類型</label>
+                    <label class="text-sm">${t('recurring:type')}</label>
                     <div class="flex h-10 w-full items-center justify-center rounded-lg bg-gray-200/50 p-1 mt-1">
-                        <button data-type="expense" class="recurring-type-btn flex-1 h-full rounded-md text-sm font-medium">支出</button>
-                        <button data-type="income" class="recurring-type-btn flex-1 h-full rounded-md text-sm font-medium">收入</button>
+                        <button data-type="expense" class="recurring-type-btn flex-1 h-full rounded-md text-sm font-medium">${t('recurring:expense')}</button>
+                        <button data-type="income" class="recurring-type-btn flex-1 h-full rounded-md text-sm font-medium">${t('recurring:income')}</button>
                     </div>
                 </div>
 
                 <div>
-                    <label class="text-sm">分類</label>
+                    <label class="text-sm">${t('recurring:category')}</label>
                     <select id="recurring-category" class="w-full mt-1 p-2 rounded-lg border-wabi-border bg-wabi-surface"></select>
                 </div>
 
                 ${advancedModeEnabled ? `
                 <div>
-                    <label class="text-sm">帳戶</label>
+                    <label class="text-sm">${t('recurring:account')}</label>
                     <select id="recurring-account" class="w-full mt-1 p-2 rounded-lg border-wabi-border bg-wabi-surface">${accountOptions}</select>
                 </div>
                 ` : ''}
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="text-sm">頻率</label>
+                        <label class="text-sm">${t('recurring:frequency')}</label>
                         <select id="recurring-frequency" class="w-full mt-1 p-2 rounded-lg border-wabi-border bg-wabi-surface">
-                            <option value="daily">每日</option>
-                            <option value="weekly">每週</option>
-                            <option value="monthly">每月</option>
-                            <option value="yearly">每年</option>
+                            <option value="daily">${t('recurring:daily')}</option>
+                            <option value="weekly">${t('recurring:weekly')}</option>
+                            <option value="monthly">${t('recurring:monthly')}</option>
+                            <option value="yearly">${t('recurring:yearly')}</option>
                         </select>
                     </div>
                     <div>
-                        <label class="text-sm">間隔</label>
+                        <label class="text-sm">${t('recurring:interval')}</label>
                         <input type="number" id="recurring-interval" value="${txToEdit?.interval || 1}" min="1" class="w-full mt-1 p-2 rounded-lg border-wabi-border bg-wabi-surface">
                     </div>
                 </div>
 
                 <div>
-                    <label class="text-sm">開始日期</label>
+                    <label class="text-sm">${t('recurring:startDate')}</label>
                     <input type="date" id="recurring-start-date" value="${txToEdit?.startDate || formatDateToString(new Date())}" class="w-full mt-1 p-2 rounded-lg border-wabi-border bg-wabi-surface">
                 </div>
 
                 <!-- Skip Rules -->
                 <div id="skip-rules-container" class="space-y-2 pt-2 hidden">
-                    <label class="text-sm font-medium text-wabi-text-primary">略過規則 (可選)</label>
+                    <label class="text-sm font-medium text-wabi-text-primary">${t('recurring:skipRules')}</label>
                     <!-- Weekly Skip -->
                     <div id="skip-weekly-controls" class="hidden">
                         <div class="grid grid-cols-4 gap-2 text-center">
-                            ${['日', '一', '二', '三', '四', '五', '六'].map((day, i) => `
+                            ${[0,1,2,3,4,5,6].map(i => `
                                 <label class="p-2 rounded-lg border border-wabi-border has-[:checked]:bg-wabi-accent has-[:checked]:border-wabi-primary">
                                     <input type="checkbox" name="skipDayOfWeek" value="${i}" class="sr-only">
-                                    <span>${day}</span>
+                                    <span>${t('recurring:day' + i)}</span>
                                 </label>
                             `).join('')}
                         </div>
                     </div>
                     <!-- Monthly Skip -->
                     <div id="skip-monthly-controls" class="hidden">
-                        <label class="text-sm font-medium text-wabi-text-primary" for="skip-day-of-month-input">略過每月幾號:</label>
-                        <input type="text" id="skip-day-of-month-input" placeholder="例如: 15, 31 (用逗號分隔)" class="w-full p-2 rounded-lg border-wabi-border bg-wabi-surface">
+                        <label class="text-sm font-medium text-wabi-text-primary" for="skip-day-of-month-input">${t('recurring:skipDayOfMonth')}</label>
+                        <input type="text" id="skip-day-of-month-input" placeholder="${t('recurring:skipDayOfMonthPlaceholder')}" class="w-full p-2 rounded-lg border-wabi-border bg-wabi-surface">
                     </div>
                     <!-- Yearly Skip -->
                     <div id="skip-yearly-controls" class="hidden">
-                        <label class="text-sm font-medium text-wabi-text-primary" for="skip-month-of-year-input">略過每年幾月:</label>
-                         <input type="text" id="skip-month-of-year-input" placeholder="例如: 7, 8 (用逗號分隔)" class="w-full p-2 rounded-lg border-wabi-border bg-wabi-surface">
+                        <label class="text-sm font-medium text-wabi-text-primary" for="skip-month-of-year-input">${t('recurring:skipMonthOfYear')}</label>
+                         <input type="text" id="skip-month-of-year-input" placeholder="${t('recurring:skipMonthOfYearPlaceholder')}" class="w-full p-2 rounded-lg border-wabi-border bg-wabi-surface">
                     </div>
                 </div>
 
                 <div class="flex gap-2 mt-6">
-                    <button id="save-recurring-btn" class="flex-1 py-3 bg-wabi-accent text-wabi-primary font-bold rounded-lg">儲存</button>
-                    <button id="cancel-recurring-btn" class="flex-1 py-3 bg-wabi-surface border border-wabi-border text-wabi-text-primary rounded-lg">取消</button>
+                    <button id="save-recurring-btn" class="flex-1 py-3 bg-wabi-accent text-wabi-primary font-bold rounded-lg">${t('common:buttons.save')}</button>
+                    <button id="cancel-recurring-btn" class="flex-1 py-3 bg-wabi-surface border border-wabi-border text-wabi-text-primary rounded-lg">${t('common:buttons.cancel')}</button>
                 </div>
             </div>
         `;
@@ -292,16 +293,16 @@ export class RecurringPage {
             }
 
             if (!data.description || !data.amount || data.amount <= 0 || !data.startDate) {
-                showToast('請填寫所有必要欄位', 'error');
+                showToast(t('recurring:toastRequiredFields'), 'error');
                 return;
             }
 
             if (isEdit) {
                 await this.app.dataService.updateRecurringTransaction(txToEdit.id, { ...txToEdit, ...data });
-                showToast('週期性交易已更新');
+                showToast(t('recurring:toastUpdated'));
             } else {
                 await this.app.dataService.addRecurringTransaction(data);
-                showToast('週期性交易已新增');
+                showToast(t('recurring:toastAdded'));
             }
             this.render();
             closeModal();

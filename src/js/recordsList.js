@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { formatCurrency, formatDate, getDateRange, escAttr } from './utils.js';
 import { createDateRangeModal } from './datePickerModal.js';
 
@@ -127,7 +128,7 @@ export class RecordsListManager {
             const currentVal = groupFilter.value;
             const types = type ? [type] : ['expense', 'income'];
             const seen = new Set();
-            let options = '<option value="">所有群組</option>';
+            let options = `<option value="">${t('records:allGroups')}</option>`;
             for (const t of types) {
                 const grouped = this.categoryManager.getGroupedCategories(t);
                 for (const { group } of grouped) {
@@ -240,7 +241,7 @@ export class RecordsListManager {
         const startStr = this.filters.customStartDate;
         const endStr = this.filters.customEndDate;
         if (!startStr || !endStr) {
-            titleEl.textContent = '記帳紀錄';
+            titleEl.textContent = t('records:title');
             return;
         }
 
@@ -261,22 +262,21 @@ export class RecordsListManager {
 
         if (startY === endY && startM === endM && isFirstDay && (isLastDay || isToday)) {
             // 顯示該月份
-            titleEl.textContent = `${startY}年${startM}月`;
+            titleEl.textContent = t('records:titleYearMonth', { year: startY, month: startM });
         } else {
-            // 顯示完整範圍
             if (startY === endY && startM === endM) {
-                titleEl.textContent = `${startY}年${startM}月${startD}號 ~ ${endD}號`;
+                titleEl.textContent = t('records:titleDateRangeSameMonth', { year: startY, month: startM, startDay: startD, endDay: endD });
             } else if (startY === endY) {
-                titleEl.textContent = `${startY}年${startM}月${startD}號 ~ ${endM}月${endD}號`;
+                titleEl.textContent = t('records:titleDateRangeSameYear', { year: startY, startMonth: startM, startDay: startD, endMonth: endM, endDay: endD });
             } else {
-                titleEl.textContent = `${startY}年${startM}月${startD}號 ~ ${endY}年${endM}月${endD}號`;
+                titleEl.textContent = t('records:titleDateRangeDiffYear', { startYear: startY, startMonth: startM, startDay: startD, endYear: endY, endMonth: endM, endDay: endD });
             }
         }
     }
 
     async loadAndRenderRecords() {
         const listContainer = this.container.querySelector('#records-list-container');
-        listContainer.innerHTML = '<p class="text-center text-wabi-text-secondary py-8">載入中...</p>';
+        listContainer.innerHTML = `<p class="text-center text-wabi-text-secondary py-8">${t('common:messages.loading')}</p>`;
 
         const dateRange = this.filters.period === 'custom' && this.filters.customStartDate
             ? { startDate: this.filters.customStartDate, endDate: this.filters.customEndDate }
@@ -435,8 +435,8 @@ export class RecordsListManager {
             listContainer.innerHTML = `
                 <div class="flex flex-col items-center justify-center pt-16 text-center">
                     <i class="fa-regular fa-folder-open text-wabi-text-secondary text-5xl"></i>
-                    <p class="mt-4 text-base font-medium text-wabi-text-primary">此期間沒有紀錄</p>
-                    <p class="mt-1 text-sm text-wabi-text-secondary">試試看選擇其他篩選條件吧！</p>
+                    <p class="mt-4 text-base font-medium text-wabi-text-primary">${t('records:noRecordsPeriod')}</p>
+                    <p class="mt-1 text-sm text-wabi-text-secondary">${t('records:noRecordsHint')}</p>
                 </div>
             `;
             return;
@@ -457,7 +457,7 @@ export class RecordsListManager {
                 const category = this.categoryManager.getCategoryById(record.type, record.category);
                 const icon = category?.icon || 'fa-solid fa-question';
                 const isTransfer = record.category === 'transfer';
-                const name = isTransfer ? '帳戶間轉帳' : (category?.name || '未分類');
+                const name = isTransfer ? t('records:transfer') : (category?.name || t('records:uncategorized'));
                 const color = category?.color || 'bg-gray-400';
                 const hasDebt = !!record.debtId;
                 const hasAmortization = !!record.amortizationId;
@@ -505,9 +505,9 @@ export class RecordsListManager {
                 if (this.advancedModeEnabled) {
                     if (record.accountId) {
                         const account = this.accounts.find(a => a.id === record.accountId);
-                        accountName = account ? account.name : '未指定帳戶';
+                        accountName = account ? account.name : t('records:noAccount');
                     } else {
-                        accountName = '現金';
+                        accountName = t('records:cash');
                     }
                 }
                 
@@ -537,7 +537,7 @@ export class RecordsListManager {
                 
                 const mainAmount = displayLogic.showZero ? 0 : record.amount;
                 const statusLabel = hasDebt 
-                    ? (isDebtSettled ? '已還清' : '待還款')
+                    ? (isDebtSettled ? t('records:debtSettled') : t('records:debtPending'))
                     : '';
                 const statusClass = isDebtSettled ? 'bg-wabi-income/20 text-wabi-income' : 'bg-orange-100 text-orange-600';
                 
@@ -554,11 +554,11 @@ export class RecordsListManager {
                         <div class="flex flex-col justify-center min-w-0">
                             <div class="flex items-center gap-2">
                                 <p class="text-wabi-text-primary text-base font-medium line-clamp-1">${escAttr(name)}</p>
-                                ${hasAmortization ? '<i class="fa-solid fa-credit-card text-blue-500 text-sm cursor-pointer amort-link-icon" title="分期計畫"></i>' : ''}
-                                ${hasDebt ? '<i class="fa-solid fa-handshake text-orange-500 text-sm" title="有關聯欠款"></i>' : ''}
+                                ${hasAmortization ? `<i class="fa-solid fa-credit-card text-blue-500 text-sm cursor-pointer amort-link-icon" title="${t('records:tooltipAmortization')}"></i>` : ''}
+                                ${hasDebt ? `<i class="fa-solid fa-handshake text-orange-500 text-sm" title="${t('records:tooltipDebt')}"></i>` : ''}
                                 ${hasDebt && statusLabel ? `<span class="text-xs ${statusClass} px-1.5 py-0.5 rounded">${statusLabel}</span>` : ''}
                             </div>
-                            <p class="text-wabi-text-secondary text-sm font-normal line-clamp-2 break-all">${escAttr(record.description || '無備註')}</p>
+                            <p class="text-wabi-text-secondary text-sm font-normal line-clamp-2 break-all">${escAttr(record.description || t('records:noNote'))}</p>
                         </div>
                     </div>
                         <div class="shrink-0 text-right">
@@ -651,7 +651,7 @@ export class RecordsListManager {
         const modalHtml = `
             <div id="category-filter-modal" class="fixed inset-0 bg-black/50 z-50 flex justify-center items-end">
                 <div class="bg-wabi-bg w-full max-w-lg rounded-t-2xl p-4 flex flex-col max-h-[80vh]">
-                    <h3 class="text-lg font-bold text-wabi-primary text-center mb-4">篩選類別</h3>
+                    <h3 class="text-lg font-bold text-wabi-primary text-center mb-4">${t('records:filterCategory')}</h3>
                     <div class="overflow-y-auto space-y-2 mb-4">
                         ${allCategoryIds.map(catId => {
                             const category = this.categoryManager.getCategoryById('expense', catId) || this.categoryManager.getCategoryById('income', catId);
@@ -677,8 +677,8 @@ export class RecordsListManager {
                         }).join('')}
                     </div>
                     <div class="flex gap-2 mt-auto pt-2 border-t border-wabi-border">
-                        <button id="apply-cat-filter" class="flex-1 py-3 bg-wabi-accent text-wabi-primary font-bold rounded-lg">套用</button>
-                        <button id="close-cat-modal" class="flex-1 py-3 bg-wabi-border text-wabi-text-primary rounded-lg">關閉</button>
+                        <button id="apply-cat-filter" class="flex-1 py-3 bg-wabi-accent text-wabi-primary font-bold rounded-lg">${t('common:buttons.apply')}</button>
+                        <button id="close-cat-modal" class="flex-1 py-3 bg-wabi-border text-wabi-text-primary rounded-lg">${t('common:buttons.close')}</button>
                     </div>
                 </div>
             </div>
@@ -706,7 +706,7 @@ export class RecordsListManager {
         const modalHtml = `
             <div id="account-filter-modal" class="fixed inset-0 bg-black/50 z-50 flex justify-center items-end">
                 <div class="bg-wabi-bg w-full max-w-lg rounded-t-2xl p-4 flex flex-col max-h-[80vh]">
-                    <h3 class="text-lg font-bold text-wabi-primary text-center mb-4">篩選帳戶</h3>
+                    <h3 class="text-lg font-bold text-wabi-primary text-center mb-4">${t('records:filterAccount')}</h3>
                     <div class="overflow-y-auto space-y-2 mb-4">
                         ${this.accounts.map(account => {
                             const isChecked = this.filters.accounts.has(String(account.id));
@@ -721,8 +721,8 @@ export class RecordsListManager {
                         }).join('')}
                     </div>
                     <div class="flex gap-2 mt-auto pt-2 border-t border-wabi-border">
-                        <button id="apply-acc-filter" class="flex-1 py-3 bg-wabi-accent text-wabi-primary font-bold rounded-lg">套用</button>
-                        <button id="close-acc-modal" class="flex-1 py-3 bg-wabi-border text-wabi-text-primary rounded-lg">關閉</button>
+                        <button id="apply-acc-filter" class="flex-1 py-3 bg-wabi-accent text-wabi-primary font-bold rounded-lg">${t('common:buttons.apply')}</button>
+                        <button id="close-acc-modal" class="flex-1 py-3 bg-wabi-border text-wabi-text-primary rounded-lg">${t('common:buttons.close')}</button>
                     </div>
                 </div>
             </div>

@@ -1,4 +1,12 @@
 // 工具函數模組
+import { getCurrentLanguage } from './i18n.js';
+
+function _resolveLocale() {
+  const lang = getCurrentLanguage();
+  if (lang === 'zh-TW') return 'zh-TW';
+  if (lang === 'zh-CN') return 'zh-CN';
+  return 'en-US';
+}
 
 /**
  * 轉義 HTML 特殊字元，防止 XSS 攻擊
@@ -181,7 +189,7 @@ export function customAlert(message, title = '提示') {
 
 export function formatCurrency(amount) {
   if (isNaN(amount)) return '0'
-  return new Intl.NumberFormat('zh-TW', {
+  return new Intl.NumberFormat(_resolveLocale(), {
     style: 'currency',
     currency: 'TWD',
     minimumFractionDigits: 0,
@@ -200,23 +208,23 @@ export function formatDate(date, format = 'short') {
   
   switch (format) {
     case 'short':
-      return dateObj.toLocaleDateString('zh-TW', {
+      return dateObj.toLocaleDateString(_resolveLocale(), {
         month: '2-digit',
         day: '2-digit'
       })
     case 'long':
-      return dateObj.toLocaleDateString('zh-TW', {
+      return dateObj.toLocaleDateString(_resolveLocale(), {
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
       })
     case 'month-day':
-      return dateObj.toLocaleDateString('zh-TW', {
+      return dateObj.toLocaleDateString(_resolveLocale(), {
         month: 'short',
         day: 'numeric'
       })
     default:
-      return dateObj.toLocaleDateString('zh-TW')
+      return dateObj.toLocaleDateString(_resolveLocale())
   }
 }
 

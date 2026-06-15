@@ -1,0 +1,22 @@
+{
+  "generic": "發生錯誤",
+  "network": "網路錯誤，請稍後再試",
+  "validation": {
+    "required": "此欄位為必填",
+    "invalidAmount": "請輸入有效金額",
+    "invalidDate": "請輸入有效日期",
+    "maxLength": "最多 {{max}} 個字元"
+  },
+  "db": {
+    "read": "讀取資料失敗",
+    "write": "儲存資料失敗",
+    "delete": "刪除資料失敗"
+  },
+  "sync": {
+    "failed": "同步失敗",
+    "conflict": "偵測到資料衝突",
+    "offline": "無網路連線"
+  },
+  "pageLoadFailed": "頁面載入失敗",
+  "pageLoadError": "頁面載入發生錯誤"
+}

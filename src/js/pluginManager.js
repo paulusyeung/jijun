@@ -1,3 +1,4 @@
+import { t } from './i18n.js';
 import { showToast } from './utils.js';
 import Chart from 'chart.js/auto';
 import { PluginStorage } from './pluginStorage.js';
@@ -172,10 +173,10 @@ export class PluginManager {
 
   /** 建立拒絕存取的 Proxy 替身（僅用於舊版沙盒） */
   _denied(group, permNeeded) {
-    const label = PluginManager.PERMISSION_LABELS[permNeeded]?.label || permNeeded;
+    const label = PluginManager.getPermLabel(permNeeded);
     return new Proxy({}, {
       get: (_, prop) => () => {
-        throw new Error(`Permission Denied: 此插件未取得「${label}」權限，無法呼叫 context.${group}.${prop}()`);
+        throw new Error(t('plugins:sandboxDeniedPermission', { label, group, prop }));
       }
     });
   }
@@ -278,60 +279,66 @@ export class PluginManager {
   _getSandboxWrapper(permissions = []) {
     const hasNetwork = permissions.includes('network');
 
-    // 網路 API 阻擋（僅在無 network 權限時生成）
+    const deniedNetwork = (api) => t('plugins:sandboxDeniedNetwork', { api });
+    const deniedNetwork2 = t('plugins:sandboxDeniedNetwork2');
+    const deniedStorage1 = t('plugins:sandboxDeniedStorage');
+    const deniedStorage2 = t('plugins:sandboxDeniedStorage2');
+    const deniedStorage3 = t('plugins:sandboxDeniedStorage3');
+    const deniedStorage4 = t('plugins:sandboxDeniedStorage4');
+    const deniedStorage5 = t('plugins:sandboxDeniedStorage5');
+    const deniedIndexedDB = t('plugins:sandboxDeniedIndexedDB');
+    const deniedFunction = t('plugins:sandboxDeniedFunction');
+    const deniedEval = t('plugins:sandboxDeniedEval');
+    const deniedOverwrite = t('plugins:sandboxDeniedOverwrite');
+
     const networkBlock = hasNetwork ? '' : `
-      const fetch = () => { throw new Error("Permission Denied: 此插件未取得「網路存取」權限，無法使用 fetch()") };
-      const XMLHttpRequest = function() { throw new Error("Permission Denied: 此插件未取得「網路存取」權限，無法使用 XMLHttpRequest") };
-      const WebSocket = function() { throw new Error("Permission Denied: 此插件未取得「網路存取」權限，無法使用 WebSocket") };
-      const EventSource = function() { throw new Error("Permission Denied: 此插件未取得「網路存取」權限，無法使用 EventSource") };
+      const fetch = () => { throw new Error("${deniedNetwork('fetch')}") };
+      const XMLHttpRequest = function() { throw new Error("${deniedNetwork('XMLHttpRequest')}") };
+      const WebSocket = function() { throw new Error("${deniedNetwork('WebSocket')}") };
+      const EventSource = function() { throw new Error("${deniedNetwork('EventSource')}") };
     `;
 
-    // Proxy 中要阻擋的網路屬性清單
     const networkProxyBlock = hasNetwork ? '' : `
            if (prop === 'fetch' || prop === 'XMLHttpRequest' || prop === 'WebSocket' || prop === 'EventSource') {
-               throw new Error("Permission Denied: 此插件未取得「網路存取」權限");
+               throw new Error("${deniedNetwork2}");
            }
     `;
 
     return `
       // ===== Plugin Sandbox =====
-      // 最先取得真正的全域物件（必須在 Function 被覆蓋前執行）
       const _realGlobal = (new Function("return this"))();
 
       const localStorage = {
-        getItem: () => { throw new Error("Access Denied: Please use context.storage.getItem()") },
-        setItem: () => { throw new Error("Access Denied: Please use context.storage.setItem()") },
-        removeItem: () => { throw new Error("Access Denied: Please use context.storage.removeItem()") },
-        clear: () => { throw new Error("Access Denied: Please use context.storage.clear()") },
-        key: () => { throw new Error("Access Denied: Please use context.storage") },
+        getItem: () => { throw new Error("${deniedStorage1}") },
+        setItem: () => { throw new Error("${deniedStorage2}") },
+        removeItem: () => { throw new Error("${deniedStorage3}") },
+        clear: () => { throw new Error("${deniedStorage4}") },
+        key: () => { throw new Error("${deniedStorage5}") },
         length: 0
       };
       const sessionStorage = {
-        getItem: () => { throw new Error("Access Denied: Please use context.storage") },
-        setItem: () => { throw new Error("Access Denied: Please use context.storage") },
-        removeItem: () => { throw new Error("Access Denied: Please use context.storage") },
-        clear: () => { throw new Error("Access Denied: Please use context.storage") }
+        getItem: () => { throw new Error("${deniedStorage5}") },
+        setItem: () => { throw new Error("${deniedStorage5}") },
+        removeItem: () => { throw new Error("${deniedStorage5}") },
+        clear: () => { throw new Error("${deniedStorage5}") }
       };
       const indexedDB = {
-        open: () => { throw new Error("Access Denied: IndexedDB is not allowed in plugins.") },
-        deleteDatabase: () => { throw new Error("Access Denied: IndexedDB is not allowed in plugins.") }
+        open: () => { throw new Error("${deniedIndexedDB}") },
+        deleteDatabase: () => { throw new Error("${deniedIndexedDB}") }
       };
 
-      // 網路 API 阻擋（根據權限動態生成）
       ${networkBlock}
-
-      // 注意：Function/eval 透過 Proxy 攔截 window.Function / window.eval
 
       const _windowProxyHandler = {
         get(target, prop) {
            if (prop === 'localStorage' || prop === 'sessionStorage' || prop === 'indexedDB') {
-               throw new Error("Access Denied: Please use context.storage");
+               throw new Error("${deniedStorage5}");
            }
            if (prop === 'Function') {
-               throw new Error("Access Denied: Function constructor is not allowed in plugins.");
+               throw new Error("${deniedFunction}");
            }
            if (prop === 'eval') {
-               throw new Error("Access Denied: eval() is not allowed in plugins.");
+               throw new Error("${deniedEval}");
            }
            ${networkProxyBlock}
            let value = Reflect.get(target, prop);
@@ -342,7 +349,7 @@ export class PluginManager {
         },
         set(target, prop, value) {
            if (prop === 'localStorage' || prop === 'sessionStorage' || prop === 'indexedDB') {
-                throw new Error("Access Denied: Cannot overwrite global storage");
+                throw new Error("${deniedOverwrite}");
            }
            return Reflect.set(target, prop, value);
         }
@@ -351,7 +358,6 @@ export class PluginManager {
       const window = new Proxy(_realGlobal, _windowProxyHandler);
       const self = window;
       const globalThis = window;
-      // ===== End Sandbox =====
     `;
   }
 
@@ -369,7 +375,7 @@ export class PluginManager {
             const computedHash = await this._computeSHA256(pluginData.script);
             if (computedHash !== pluginData.scriptHash) {
                 console.warn(`Plugin ${pluginData.name}: Script hash mismatch (possible tampering). Expected ${pluginData.scriptHash}, got ${computedHash}.`);
-                showToast(`插件「${pluginData.name}」檔案已遭篡改，載入中止`, 'error');
+                showToast(t('plugins:tampered', { name: pluginData.name }), 'error');
                 return;
             }
         }
@@ -402,7 +408,7 @@ export class PluginManager {
         URL.revokeObjectURL(url);
     } catch (e) {
         console.error(`Error loading plugin ${pluginData.name}:`, e);
-        showToast(`插件 ${pluginData.name} 載入失敗`, 'error');
+        showToast(t('plugins:loadFailed', { name: pluginData.name }), 'error');
     }
   }
 
@@ -419,7 +425,7 @@ export class PluginManager {
             const computedHash = await this._computeSHA256(pluginData.script);
             if (computedHash !== pluginData.scriptHash) {
                 console.warn(`Plugin ${pluginData.name}: Script hash mismatch (possible tampering). Expected ${pluginData.scriptHash}, got ${computedHash}.`);
-                showToast(`插件「${pluginData.name}」檔案已遭篡改，載入中止`, 'error');
+                showToast(t('plugins:tampered', { name: pluginData.name }), 'error');
                 return;
             }
         }
@@ -484,7 +490,7 @@ export class PluginManager {
 
     } catch (e) {
         console.error(`Error loading plugin ${pluginData.name} in iframe:`, e);
-        showToast(`插件 ${pluginData.name} iframe 載入失敗，使用舊版沙盒`, 'error');
+        showToast(t('plugins:iframeLoadFailed', { name: pluginData.name }), 'error');
 
         // 10.7 退回舊版沙盒
         if (this._iframeChannels.has(channelId)) {
@@ -695,13 +701,16 @@ export class PluginManager {
 
   /** 權限標籤對照表 */
   static PERMISSION_LABELS = {
-    'storage':    { icon: 'fa-database',       label: '儲存空間',     desc: '允許在本機存取插件專屬的儲存空間' },
-    'data:read':  { icon: 'fa-eye',            label: '讀取帳務資料', desc: '允許讀取記帳紀錄、帳戶、欠款、分類等資料' },
-    'data:write': { icon: 'fa-pen-to-square',  label: '寫入帳務資料', desc: '允許新增或修改記帳紀錄、欠款、聯絡人' },
-    'ui':         { icon: 'fa-window-maximize', label: '使用者介面',   desc: '允許註冊頁面、顯示通知、首頁小工具' },
-    'network':    { icon: 'fa-globe',           label: '網路存取',     desc: '允許與外部伺服器通訊（如匯率查詢）' },
-    'camera':     { icon: 'fa-camera',          label: '相機權限',     desc: '允許透過相機掃描條碼或讀取影像' },
+    'storage':    { icon: 'fa-database',       labelKey: 'permStorage',       descKey: 'permStorageDesc' },
+    'data:read':  { icon: 'fa-eye',            labelKey: 'permDataRead',       descKey: 'permDataReadDesc' },
+    'data:write': { icon: 'fa-pen-to-square',  labelKey: 'permDataWrite',      descKey: 'permDataWriteDesc' },
+    'ui':         { icon: 'fa-window-maximize', labelKey: 'permUI',            descKey: 'permUIDesc' },
+    'network':    { icon: 'fa-globe',           labelKey: 'permNetwork',       descKey: 'permNetworkDesc' },
+    'camera':     { icon: 'fa-camera',          labelKey: 'permCamera',        descKey: 'permCameraDesc' },
   };
+
+  static getPermLabel(key) { return t(`plugins:${PluginManager.PERMISSION_LABELS[key]?.labelKey || 'unknownPermission'}`); }
+  static getPermDesc(key) { return t(`plugins:${PluginManager.PERMISSION_LABELS[key]?.descKey || 'unknownPermission'}`); }
 
   /**
    * 顯示權限同意對話框
@@ -711,24 +720,26 @@ export class PluginManager {
    */
   showPermissionConsent(meta, permissions = [], isUpdate = false) {
     return new Promise((resolve) => {
-      const safeName = this._escapeHTML(meta.name || '未知插件');
-      const safeAuthor = this._escapeHTML(meta.author || '未知作者');
+      const safeName = this._escapeHTML(meta.name || t('plugins:unknownPlugin'));
+      const safeAuthor = this._escapeHTML(meta.author || t('plugins:unknownAuthor'));
       const safeDesc = this._escapeHTML(meta.description || '');
 
       const permListHtml = permissions.length > 0
         ? permissions.map(p => {
-            const info = PluginManager.PERMISSION_LABELS[p] || { icon: 'fa-question', label: p, desc: '未知權限' };
+            const info = PluginManager.PERMISSION_LABELS[p] || { icon: 'fa-question', labelKey: 'unknownPermission', descKey: 'unknownPermission' };
+            const label = t(`plugins:${info.labelKey}`);
+            const desc = t(`plugins:${info.descKey}`);
             return `
               <div class="flex items-start gap-3 py-2">
                 <div class="text-wabi-primary shrink-0 mt-0.5"><i class="fa-solid ${info.icon}"></i></div>
                 <div>
-                  <p class="text-sm font-medium text-wabi-text-primary">${this._escapeHTML(info.label)}</p>
-                  <p class="text-xs text-wabi-text-secondary">${this._escapeHTML(info.desc)}</p>
+                  <p class="text-sm font-medium text-wabi-text-primary">${this._escapeHTML(label)}</p>
+                  <p class="text-xs text-wabi-text-secondary">${this._escapeHTML(desc)}</p>
                 </div>
               </div>
             `;
           }).join('')
-        : '<p class="text-sm text-wabi-text-secondary py-2">此插件未聲明任何特殊權限。</p>';
+        : `<p class="text-sm text-wabi-text-secondary py-2">${t('plugins:noSpecialPermissions')}</p>`;
 
       const modal = document.createElement('div');
       modal.className = 'fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 animation-fade-in';
@@ -746,13 +757,13 @@ export class PluginManager {
             </div>
             ${safeDesc ? `<p class="text-sm text-wabi-text-secondary mb-4">${safeDesc}</p>` : ''}
             <div class="bg-wabi-bg rounded-lg p-3 mb-4 border border-wabi-border">
-              <h4 class="text-xs font-bold text-wabi-text-secondary uppercase tracking-wider mb-2">${isUpdate ? '此更新新增了以下權限' : '此插件將要求以下權限'}</h4>
+              <h4 class="text-xs font-bold text-wabi-text-secondary uppercase tracking-wider mb-2">${isUpdate ? t('plugins:newPermissions') : t('plugins:requestPermissions')}</h4>
               <div class="divide-y divide-wabi-border">${permListHtml}</div>
             </div>
           </div>
           <div class="flex border-t border-wabi-border">
-            <button id="pm-perm-cancel" class="flex-1 py-3 text-wabi-text-secondary font-medium hover:bg-wabi-bg transition-colors border-r border-wabi-border">取消</button>
-            <button id="pm-perm-accept" class="flex-1 py-3 text-wabi-surface font-medium bg-wabi-primary hover:bg-wabi-primary/90 transition-colors">${isUpdate ? '同意並更新' : '安裝'}</button>
+            <button id="pm-perm-cancel" class="flex-1 py-3 text-wabi-text-secondary font-medium hover:bg-wabi-bg transition-colors border-r border-wabi-border">${t('plugins:cancel')}</button>
+            <button id="pm-perm-accept" class="flex-1 py-3 text-wabi-surface font-medium bg-wabi-primary hover:bg-wabi-primary/90 transition-colors">${isUpdate ? t('plugins:agreeAndUpdate') : t('plugins:install')}</button>
           </div>
         </div>
       `;
@@ -774,7 +785,7 @@ export class PluginManager {
             if (storePluginInfo?.sha256) {
                 const computedHash = await this._computeSHA256(scriptContent);
                 if (computedHash !== storePluginInfo.sha256) {
-                    reject(new Error('插件檔案完整性驗證失敗：SHA-256 hash 不符'));
+                    reject(new Error(t('plugins:hashMismatch')));
                     return;
                 }
             }
@@ -797,7 +808,7 @@ export class PluginManager {
                  meta = module.default?.meta || {};
              } catch(err) {
                  URL.revokeObjectURL(url);
-                 reject(new Error('無法解析插件檔案'));
+                 reject(new Error(t('plugins:cannotParse')));
                  return;
              }
              URL.revokeObjectURL(url);
@@ -825,7 +836,7 @@ export class PluginManager {
                       true // isUpdate flag
                     );
                     if (!accepted) {
-                        reject(new Error('使用者取消更新'));
+                        reject(new Error(t('plugins:userCancelledUpdate')));
                         return;
                     }
                 }
@@ -836,7 +847,7 @@ export class PluginManager {
                   permissions
                 );
                 if (!accepted) {
-                    reject(new Error('使用者取消安裝'));
+                    reject(new Error(t('plugins:userCancelledInstall')));
                     return;
                 }
             }
@@ -861,7 +872,7 @@ export class PluginManager {
             await this.loadPlugin(pluginData);
             resolve(pluginData);
         };
-        reader.onerror = () => reject(new Error('讀取失敗'));
+        reader.onerror = () => reject(new Error(t('plugins:readFailed')));
         reader.readAsText(file);
     });
   }
@@ -882,7 +893,7 @@ export class PluginManager {
       await tx.store.delete(id);
       await tx.done;
       this.plugins.delete(id);
-      showToast('插件已移除，請重新整理頁面');
+      showToast(t('plugins:removed'));
   }
     
   async getInstalledPlugins() {
@@ -1056,8 +1067,8 @@ export class PluginManager {
   showConfirmModal(title, message) {
       return new Promise((resolve) => {
           const btns = `
-              <button class="px-4 py-2 rounded-lg text-wabi-text-secondary hover:bg-wabi-bg font-medium transition-colors border border-wabi-border" id="pm-modal-cancel">取消</button>
-              <button class="px-4 py-2 rounded-lg bg-wabi-primary text-wabi-surface hover:bg-opacity-90 font-medium transition-colors" id="pm-modal-confirm">確定</button>
+              <button class="px-4 py-2 rounded-lg text-wabi-text-secondary hover:bg-wabi-bg font-medium transition-colors border border-wabi-border" id="pm-modal-cancel">${t('plugins:cancel')}</button>
+              <button class="px-4 py-2 rounded-lg bg-wabi-primary text-wabi-surface hover:bg-opacity-90 font-medium transition-colors" id="pm-modal-confirm">${t('plugins:confirm')}</button>
           `;
           const modal = this.createModalBase(title, message, btns);
           
@@ -1074,7 +1085,7 @@ export class PluginManager {
   showAlertModal(title, message) {
       return new Promise((resolve) => {
           const btns = `
-              <button class="px-4 py-2 rounded-lg bg-wabi-primary text-wabi-surface hover:bg-opacity-90 font-medium transition-colors" id="pm-modal-ok">確定</button>
+              <button class="px-4 py-2 rounded-lg bg-wabi-primary text-wabi-surface hover:bg-opacity-90 font-medium transition-colors" id="pm-modal-ok">${t('plugins:confirm')}</button>
           `;
           const modal = this.createModalBase(title, message, btns);
           

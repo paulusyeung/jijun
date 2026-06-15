@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import { formatDate, formatDateToString, formatCurrency, showToast, escapeHTML, escAttr, calculateAmortizationDetails, customConfirm, triggerHaptic } from '../utils.js';
 
 export class AddPage {
@@ -25,15 +26,15 @@ export class AddPage {
                             <button id="add-page-close-btn" class="flex size-12 shrink-0 items-center justify-center">
                                 <i class="fa-solid fa-xmark text-2xl text-wabi-text-primary"></i>
                             </button>
-                            <h2 class="text-lg font-bold flex-1 text-center">${isEditMode ? '編輯紀錄' : '新增紀錄'}</h2>
+                            <h2 class="text-lg font-bold flex-1 text-center">${isEditMode ? t('add:editRecord') : t('add:newRecord')}</h2>
                             <div class="flex items-center gap-2">
                                 ${showDebtBtn ? `
-                                    <button id="toggle-debt-btn" class="size-10 flex items-center justify-center rounded-full text-wabi-text-secondary hover:bg-wabi-bg" title="標記為欠款">
+                                    <button id="toggle-debt-btn" class="size-10 flex items-center justify-center rounded-full text-wabi-text-secondary hover:bg-wabi-bg" title="${t('add:markAsDebt')}">
                                         <i class="fa-solid fa-handshake text-lg"></i>
                                     </button>
                                 ` : ''}
                                 ${showInstallmentBtn ? `
-                                    <button id="toggle-installment-btn" class="size-10 flex items-center justify-center rounded-full text-wabi-text-secondary hover:bg-wabi-bg" title="建立分期/攤提">
+                                    <button id="toggle-installment-btn" class="size-10 flex items-center justify-center rounded-full text-wabi-text-secondary hover:bg-wabi-bg" title="${t('add:createInstallment')}">
                                         <i class="fa-solid fa-credit-card text-lg"></i>
                                     </button>
                                 ` : ''}
@@ -44,92 +45,92 @@ export class AddPage {
                         <!-- Debt Panel (hidden by default) -->
                         <div id="debt-panel" class="hidden bg-wabi-primary/10 rounded-lg p-4 mb-4 border border-wabi-primary/30">
                             <div class="flex items-center justify-between mb-3">
-                                <span class="font-medium text-wabi-primary"><i class="fa-solid fa-handshake mr-2"></i>欠款標記</span>
+                                <span class="font-medium text-wabi-primary"><i class="fa-solid fa-handshake mr-2"></i>${t('add:debtMark')}</span>
                                 <button id="close-debt-panel" class="text-wabi-text-secondary hover:text-wabi-primary">
                                     <i class="fa-solid fa-times"></i>
                                 </button>
                             </div>
                             <div class="flex h-9 w-full items-center justify-center rounded-lg bg-wabi-primary/5 p-1 mb-3">
-                                <button id="debt-type-receivable-add" class="debt-add-type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium bg-wabi-income text-wabi-surface">別人欠我</button>
-                                <button id="debt-type-payable-add" class="debt-add-type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">我欠別人</button>
+<button id="debt-type-receivable-add" class="debt-add-type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium bg-wabi-income text-wabi-surface">${t('debts:receivable')}</button>
+<button id="debt-type-payable-add" class="debt-add-type-btn flex-1 h-full rounded-md px-3 py-1 text-sm font-medium text-wabi-text-secondary">${t('debts:payable')}</button>
                             </div>
-                            <select id="debt-contact-select" class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm">
-                                <option value="">選擇聯絡人...</option>
-                            </select>
-                            <p class="text-xs text-wabi-text-secondary mt-2">儲存時將同時建立欠款記錄</p>
+<select id="debt-contact-select" class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm">
+    <option value="">${t('debts:selectContact')}</option>
+</select>
+<p class="text-xs text-wabi-text-secondary mt-2">${t('add:debtNote')}</p>
                         </div>
 
                         <!-- Installment Panel (hidden by default) -->
                         <div id="installment-panel" class="hidden bg-blue-500/10 rounded-lg p-4 mb-4 border border-blue-500/30">
                             <div class="flex items-center justify-between mb-3">
-                                <span class="font-medium text-blue-600"><i class="fa-solid fa-credit-card mr-2"></i>分期/攤提</span>
+                                <span class="font-medium text-blue-600"><i class="fa-solid fa-credit-card mr-2"></i>${t('add:installmentTitle')}</span>
                                 <button id="close-installment-panel" class="text-wabi-text-secondary hover:text-blue-600">
                                     <i class="fa-solid fa-times"></i>
                                 </button>
                             </div>
                             <div class="mb-2">
-                                <input type="text" id="installment-name" maxlength="40" placeholder="名稱（如：MacBook 分期）"
-                                    class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500" />
+<input type="text" id="installment-name" maxlength="40" placeholder="${t('add:instNamePlaceholder')}"
+    class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500" />
                             </div>
                             <div class="flex h-9 w-full items-center justify-center rounded-lg bg-blue-500/5 p-1 mb-2">
-                                <button class="inst-type-btn flex-1 h-full rounded-md px-3 py-1 text-xs font-medium bg-blue-500 text-white" data-inst-type="installment">分期付款</button>
-                                <button class="inst-type-btn flex-1 h-full rounded-md px-3 py-1 text-xs font-medium text-wabi-text-secondary" data-inst-type="depreciation">折舊</button>
-                                <button class="inst-type-btn flex-1 h-full rounded-md px-3 py-1 text-xs font-medium text-wabi-text-secondary" data-inst-type="amortization">攤提</button>
+<button class="inst-type-btn flex-1 h-full rounded-md px-3 py-1 text-xs font-medium bg-blue-500 text-white" data-inst-type="installment">${t('amortizations:installment')}</button>
+<button class="inst-type-btn flex-1 h-full rounded-md px-3 py-1 text-xs font-medium text-wabi-text-secondary" data-inst-type="depreciation">${t('amortizations:depreciation')}</button>
+<button class="inst-type-btn flex-1 h-full rounded-md px-3 py-1 text-xs font-medium text-wabi-text-secondary" data-inst-type="amortization">${t('amortizations:amortization')}</button>
                             </div>
                             <div class="grid grid-cols-2 gap-2 mb-2">
-                                <div>
-                                    <label class="text-xs text-wabi-text-secondary">總期數</label>
-                                    <input type="number" id="installment-periods" min="1" max="600" placeholder="12"
-                                        class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500" />
-                                </div>
-                                <div>
-                                    <label class="text-xs text-wabi-text-secondary">頻率</label>
-                                    <select id="installment-frequency" class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500">
-                                        <option value="monthly" selected>每月</option>
-                                        <option value="weekly">每週</option>
-                                        <option value="yearly">每年</option>
-                                    </select>
-                                </div>
+<div>
+    <label class="text-xs text-wabi-text-secondary">${t('add:totalPeriods')}</label>
+    <input type="number" id="installment-periods" min="1" max="600" placeholder="12"
+        class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500" />
+</div>
+<div>
+    <label class="text-xs text-wabi-text-secondary">${t('add:frequency')}</label>
+    <select id="installment-frequency" class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500">
+        <option value="monthly" selected>${t('amortizations:monthly')}</option>
+        <option value="weekly">${t('amortizations:weekly')}</option>
+        <option value="yearly">${t('amortizations:yearly')}</option>
+    </select>
+</div>
                             </div>
                             <div class="grid grid-cols-2 gap-2 mb-2">
-                                <div>
-                                    <label class="text-xs text-wabi-text-secondary">首付金額 <span class="opacity-50">(選填)</span></label>
-                                    <input type="number" id="installment-downpayment" min="0" step="0.01" placeholder="0"
-                                        class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500" />
-                                </div>
-                                <div>
-                                    <label class="text-xs text-wabi-text-secondary">年利率 % <span class="opacity-50">(選填)</span></label>
-                                    <input type="number" id="installment-interest" min="0" max="100" step="0.01" placeholder="0"
-                                        class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500" />
-                                </div>
+<div>
+    <label class="text-xs text-wabi-text-secondary">${t('add:downPayment')} <span class="opacity-50">${t('add:optional')}</span></label>
+    <input type="number" id="installment-downpayment" min="0" step="0.01" placeholder="0"
+        class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500" />
+</div>
+<div>
+    <label class="text-xs text-wabi-text-secondary">${t('add:interestRate')} <span class="opacity-50">${t('add:optional')}</span></label>
+    <input type="number" id="installment-interest" min="0" max="100" step="0.01" placeholder="0"
+        class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500" />
+</div>
                             </div>
                             <div class="mb-2">
-                                <label class="text-xs text-wabi-text-secondary">每期小數點處理 <span class="opacity-50">(差額會在最後一期補齊)</span></label>
-                                <select id="installment-decimal-strategy" class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500">
-                                    <option value="round" selected>四捨五入 (至整數)</option>
-                                    <option value="ceil">無條件進位 (至整數)</option>
-                                    <option value="floor">無條件捨去 (至整數)</option>
-                                    <option value="keep">保留小數 (至小數第二位)</option>
-                                </select>
+<label class="text-xs text-wabi-text-secondary">${t('add:decimalStrategy')} <span class="opacity-50">${t('add:decimalHint')}</span></label>
+<select id="installment-decimal-strategy" class="w-full p-2 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-blue-500">
+    <option value="round" selected>${t('add:round')}</option>
+    <option value="ceil">${t('add:ceil')}</option>
+    <option value="floor">${t('add:floor')}</option>
+    <option value="keep">${t('add:keep')}</option>
+</select>
                             </div>
                             <div id="installment-calc-preview" class="p-2 bg-blue-500/5 rounded-lg text-xs text-wabi-text-secondary">
-                                <span>每期金額：</span><strong id="installment-per-period" class="text-blue-600">--</strong>
+                                <span>${t('add:perPeriodAmount')}</span><strong id="installment-per-period" class="text-blue-600">--</strong>
                             </div>
-                            <p class="text-xs text-wabi-text-secondary mt-2">金額/分類/日期由上方記帳欄位帶入，儲存時自動建立分期計畫。</p>
+                            <p class="text-xs text-wabi-text-secondary mt-2">${t('add:instPanelNote')}</p>
                         </div>
 
                         <!-- Type Switcher & Amount -->
                         <div class="px-4">
                             <div class="flex h-11 w-full items-center justify-center rounded-lg bg-wabi-primary/5 p-1 mb-4">
-                                <button id="add-type-expense" class="flex-1 h-full rounded-md text-sm font-medium">支出</button>
-                                <button id="add-type-income" class="flex-1 h-full rounded-md text-sm font-medium">收入</button>
+<button id="add-type-expense" class="flex-1 h-full rounded-md text-sm font-medium">${t('common:common.expense')}</button>
+<button id="add-type-income" class="flex-1 h-full rounded-md text-sm font-medium">${t('common:common.income')}</button>
                             </div>
                             <div class="flex items-center justify-between py-4">
                                 <div id="add-selected-category" class="flex items-center gap-4">
                                     <div class="flex items-center justify-center rounded-full bg-wabi-text-secondary/10 shrink-0 size-12">
                                         <i class="fa-solid fa-question text-3xl text-wabi-text-secondary"></i>
                                     </div>
-                                    <p class="text-lg font-medium">選擇分類</p>
+<p class="text-lg font-medium">${t('add:selectCategory')}</p>
                                 </div>
                                 <div id="add-amount-display" class="text-wabi-expense tracking-light text-5xl font-bold">$0</div>
                             </div>
@@ -155,7 +156,7 @@ export class AddPage {
                             <span id="add-date-display" class="text-sm font-medium">${formatDate(formatDateToString(new Date()), 'short')}</span>
                             <input type="date" id="add-date-input" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
                         </label>
-                        <input id="add-note-input" class="w-full rounded-lg border-wabi-border bg-wabi-surface/80 placeholder:text-wabi-text-secondary focus:border-wabi-primary focus:ring-wabi-primary" placeholder="新增備註" type="text"/>
+                        <input id="add-note-input" class="w-full rounded-lg border-wabi-border bg-wabi-surface/80 placeholder:text-wabi-text-secondary focus:border-wabi-primary focus:ring-wabi-primary" placeholder="${t('add:notePlaceholder')}" type="text"/>
                         <button id="keypad-toggle-btn" class="p-2 rounded-lg bg-wabi-surface/50">
                             <i class="fa-solid fa-keyboard"></i>
                         </button>
@@ -237,7 +238,7 @@ export class AddPage {
                 const contacts = await this.app.dataService.getContacts();
                 const select = document.getElementById('debt-contact-select');
                 if (select) {
-                    select.innerHTML = `<option value="">選擇聯絡人...</option>` +
+                    select.innerHTML = `<option value="">${t('debts:selectContact')}</option>` +
                         contacts.map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('');
                 }
             };
@@ -361,7 +362,7 @@ export class AddPage {
             const selectedAccount = accounts.find(a => a.id === selectedAccountId);
             if (selectedAccount) {
                 accountSelectorContainer.innerHTML = `
-                    <label class="text-sm text-wabi-text-secondary">帳戶</label>
+                    <label class="text-sm text-wabi-text-secondary">${t('common:common.account')}</label>
                     <button id="account-selector-btn" class="w-full flex items-center justify-between bg-wabi-surface py-1 px-2 mt-1 rounded-lg border border-wabi-border">
                         <div class="flex items-center gap-3 truncate">
                             <i class="${escAttr(selectedAccount.icon)} text-lg"></i>
@@ -388,7 +389,7 @@ export class AddPage {
             if (accounts.length > 0) {
                 selectedAccountId = accounts[0].id; // Default to first account
             } else {
-                accountSelectorContainer.innerHTML = `<p class="text-center text-red-500">請先至「設定」頁面建立一個帳戶</p>`;
+                accountSelectorContainer.innerHTML = `<p class="text-center text-red-500">${t('add:noAccountWarning')}</p>`;
             }
         }
 
@@ -473,7 +474,7 @@ export class AddPage {
             });
             const manageBtn = document.createElement('button');
             manageBtn.className = 'flex flex-col items-center gap-1 p-2 rounded-lg border-2 border-dashed border-wabi-border hover:border-wabi-primary';
-            manageBtn.innerHTML = `<div class="flex size-12 items-center justify-center rounded-full bg-wabi-text-secondary/10"><i class="fa-solid fa-gear text-2xl text-wabi-text-secondary"></i></div><p class="text-xs text-center text-wabi-text-secondary">管理</p>`;
+            manageBtn.innerHTML = `<div class="flex size-12 items-center justify-center rounded-full bg-wabi-text-secondary/10"><i class="fa-solid fa-gear text-2xl text-wabi-text-secondary"></i></div><p class="text-xs text-center text-wabi-text-secondary">${t('add:manage')}</p>`;
             manageBtn.addEventListener('click', () => this.app.categoryManager.showManageCategoriesModal(currentType, renderCategories));
             categoryGrid.appendChild(manageBtn);
         };
@@ -489,15 +490,15 @@ export class AddPage {
                     <p class="text-lg font-medium flex-1 truncate">${escAttr(category.name)}</p>
                 `;
             } else {
-                selectedCategoryUI.innerHTML = `<div class="flex items-center justify-center rounded-full bg-wabi-text-secondary/10 shrink-0 size-12"><i class="fa-solid fa-question text-3xl text-wabi-text-secondary"></i></div><p class="text-lg font-medium">選擇分類</p>`;
+                selectedCategoryUI.innerHTML = `<div class="flex items-center justify-center rounded-full bg-wabi-text-secondary/10 shrink-0 size-12"><i class="fa-solid fa-question text-3xl text-wabi-text-secondary"></i></div><p class="text-lg font-medium">${t('add:selectCategory')}</p>`;
             }
         };
 
         const saveInstallmentPlan = async (amount) => {
             const instName = document.getElementById('installment-name')?.value.trim();
             const instPeriods = parseInt(document.getElementById('installment-periods')?.value);
-            if (!instName) { showToast('請輸入分期名稱', 'error'); return; }
-            if (!instPeriods || instPeriods <= 0) { showToast('請輸入有效的期數', 'error'); return; }
+            if (!instName) { showToast(t('add:instNameRequired'), 'error'); return; }
+            if (!instPeriods || instPeriods <= 0) { showToast(t('add:instPeriodsRequired'), 'error'); return; }
             const instDownPayment = parseFloat(document.getElementById('installment-downpayment')?.value) || 0;
             const instRate = parseFloat(document.getElementById('installment-interest')?.value) || 0;
             const instFrequency = document.getElementById('installment-frequency')?.value || 'monthly';
@@ -526,7 +527,7 @@ export class AddPage {
                 accountId: advancedModeEnabled ? selectedAccountId : null,
             });
             await this.app.processAmortizations();
-            showToast(`「${instName}」分期計畫已建立！`);
+            showToast(t('add:planCreated', { name: instName }));
             window.location.hash = 'records';
         };
 
@@ -571,9 +572,9 @@ export class AddPage {
                             recordId: numericId
                         });
                         await this.app.dataService.updateRecord(numericId, { debtId: debtId });
-                        showToast('更新成功並建立欠款記錄！');
+                        showToast(t('add:updatedWithDebt'));
                     } else {
-                        showToast('更新成功！');
+                        showToast(t('add:updated'));
                     }
                     window.location.hash = 'records';
                 } catch (e) {
@@ -594,9 +595,9 @@ export class AddPage {
                         recordId: newRecordId
                     });
                     await this.app.dataService.updateRecord(newRecordId, { debtId: debtId });
-                    showToast('儲存成功並建立欠款記錄！');
+                    showToast(t('add:savedWithDebt'));
                 } else {
-                    showToast('儲存成功！');
+                    showToast(t('add:saved'));
                 }
                 window.location.hash = 'records';
             }
@@ -621,11 +622,11 @@ export class AddPage {
             } else if (key === 'save') {
                 const amount = parseFloat(currentAmount);
                 if (advancedModeEnabled && !selectedAccountId) {
-                    showToast('請先建立一個帳戶', 'error');
+                    showToast(t('add:noAccountToast'), 'error');
                     return;
                 }
                 if (debtEnabled && !debtContactId) {
-                    showToast('請選擇欠款聯絡人', 'error');
+                    showToast(t('add:selectDebtContact'), 'error');
                     return;
                 }
                 if (amount > 0 && selectedCategory) {
@@ -635,7 +636,7 @@ export class AddPage {
                         await saveRegularRecord(amount);
                     }
                 } else {
-                    showToast('請輸入金額並選擇分類', 'error');
+                    showToast(t('add:enterAmountAndCategory'), 'error');
                 }
             }
             amountDisplay.textContent = formatCurrency(currentAmount);
@@ -664,7 +665,7 @@ export class AddPage {
                     if (debt) {
                         const contacts = await this.app.dataService.getContacts();
                         const contact = contacts.find(c => c.id === debt.contactId);
-                        const contactName = contact?.name || '未知聯絡人';
+                        const contactName = contact?.name || t('add:unknownContact');
                         const isReceivable = debt.type === 'receivable';
                         const remainingAmount = debt.remainingAmount ?? debt.originalAmount ?? debt.amount ?? 0;
                         const originalAmount = debt.originalAmount ?? debt.amount ?? 0;
@@ -687,19 +688,19 @@ export class AddPage {
                         debtInfoPanel.innerHTML = `
                             <div class="flex items-center justify-between mb-3">
                                 <span class="font-medium text-wabi-primary">
-                                    <i class="fa-solid fa-handshake mr-2"></i>關聯欠款
+                                    <i class="fa-solid fa-handshake mr-2"></i>${t('add:debtLink')}
                                 </span>
-                                ${debt.settled ? '<span class="text-xs bg-wabi-income/20 text-wabi-income px-2 py-1 rounded">已還清</span>' : ''}
+                                ${debt.settled ? `<span class="text-xs bg-wabi-income/20 text-wabi-income px-2 py-1 rounded">${t('debts:settled')}</span>` : ''}
                             </div>
                             ${!debt.settled ? `
                                 <!-- Editable debt info -->
                                 <div class="space-y-2 mb-3">
                                     <div class="flex gap-2">
                                         <button id="debt-type-receivable-edit" class="flex-1 py-1.5 text-xs font-medium rounded-lg border ${isReceivable ? 'bg-wabi-income text-white border-wabi-income' : 'border-wabi-border text-wabi-text-secondary'}">
-                                            別人欠我
+                                            ${t('debts:receivable')}
                                         </button>
                                         <button id="debt-type-payable-edit" class="flex-1 py-1.5 text-xs font-medium rounded-lg border ${!isReceivable ? 'bg-wabi-expense text-white border-wabi-expense' : 'border-wabi-border text-wabi-text-secondary'}">
-                                            我欠別人
+                                            ${t('debts:payable')}
                                         </button>
                                     </div>
                                     <select id="debt-contact-edit" class="w-full p-2 border border-wabi-border rounded-lg text-sm bg-wabi-surface text-wabi-text-primary">
@@ -709,8 +710,8 @@ export class AddPage {
                                 <!-- Progress bar -->
                                 <div class="mb-3">
                                     <div class="flex justify-between text-xs text-wabi-text-secondary mb-1">
-                                        <span>剩餘：${formatCurrency(remainingAmount)}</span>
-                                        <span>${paidPercent}% 已還</span>
+                                        <span>${t('add:remaining')}${formatCurrency(remainingAmount)}</span>
+                                        <span>${t('add:percentPaid', { percent: paidPercent })}</span>
                                     </div>
                                     <div class="w-full bg-wabi-border rounded-full h-2">
                                         <div class="bg-wabi-income h-2 rounded-full" style="width: ${paidPercent}%"></div>
@@ -719,7 +720,7 @@ export class AddPage {
                                 <!-- Action buttons -->
                                 <div class="flex gap-2">
                                     <button id="partial-pay-btn" class="flex-1 py-2 text-sm font-medium text-wabi-surface bg-wabi-primary rounded-lg">
-                                        <i class="fa-solid fa-coins mr-1"></i>還款
+                                        <i class="fa-solid fa-coins mr-1"></i>${t('add:repay')}
                                     </button>
                                     <button id="remove-debt-link-btn" class="py-2 px-3 text-sm font-medium text-wabi-expense border border-wabi-expense/40 rounded-lg bg-wabi-surface">
                                         <i class="fa-solid fa-unlink"></i>
@@ -727,9 +728,9 @@ export class AddPage {
                                 </div>
                             ` : `
                                 <div class="text-sm text-wabi-text-secondary">
-                                    <p><strong class="text-wabi-text-primary">聯絡人：</strong>${contactName}</p>
-                                    <p><strong class="text-wabi-text-primary">類型：</strong>${isReceivable ? '別人欠我' : '我欠別人'}</p>
-                                    <p><strong class="text-wabi-text-primary">原始金額：</strong>${formatCurrency(originalAmount)}</p>
+                                    <p><strong class="text-wabi-text-primary">${t('debts:contactLabel')}</strong>${contactName}</p>
+                                    <p><strong class="text-wabi-text-primary">${t('debts:typeLabel')}</strong>${isReceivable ? t('debts:receivable') : t('debts:payable')}</p>
+                                    <p><strong class="text-wabi-text-primary">${t('debts:originalAmountLabel')}</strong>${formatCurrency(originalAmount)}</p>
                                 </div>
                             `}
                         `;
@@ -757,12 +758,12 @@ export class AddPage {
                         // Bind debt type edit buttons
                         document.getElementById('debt-type-receivable-edit')?.addEventListener('click', async () => {
                             await this.app.dataService.updateDebt(debt.id, { type: 'receivable' });
-                            showToast('欠款類型已更新');
+                            showToast(t('add:debtTypeUpdated'));
                             await refresh();
                         });
                         document.getElementById('debt-type-payable-edit')?.addEventListener('click', async () => {
                             await this.app.dataService.updateDebt(debt.id, { type: 'payable' });
-                            showToast('欠款類型已更新');
+                            showToast(t('add:debtTypeUpdated'));
                             await refresh();
                         });
 
@@ -771,7 +772,7 @@ export class AddPage {
                             const newContactId = parseInt(e.target.value);
                             if (newContactId) {
                                 await this.app.dataService.updateDebt(debt.id, { contactId: newContactId });
-                                showToast('欠款人已更新');
+                                showToast(t('add:debtContactUpdated'));
                             }
                         });
 
@@ -787,10 +788,10 @@ export class AddPage {
                         const removeDebtBtn = document.getElementById('remove-debt-link-btn');
                         if (removeDebtBtn) {
                             removeDebtBtn.addEventListener('click', async () => {
-                                if (await customConfirm('確定要取消此記錄與欠款的關聯嗎？欠款記錄將被刪除。')) {
+                                if (await customConfirm(t('add:confirmUnlinkDebt'))) {
                                     await this.app.dataService.deleteDebt(debt.id);
                                     await this.app.dataService.updateRecord(numericRecordId, { debtId: null });
-                                    showToast('已取消欠款關聯');
+                                    showToast(t('add:debtUnlinked'));
                                     await refresh();
                                 }
                             });
@@ -808,16 +809,16 @@ export class AddPage {
                     amortInfoPanel.innerHTML = `
                         <div class="flex items-center justify-between mb-2">
                             <span class="font-medium text-blue-600">
-                                <i class="fa-solid fa-credit-card mr-2"></i>由分期計畫產生
+                                <i class="fa-solid fa-credit-card mr-2"></i>${t('add:amortizationSource')}
                             </span>
                             <button id="view-amort-link-btn" class="text-xs bg-blue-500 text-white px-3 py-1.5 rounded-lg font-medium hover:bg-blue-600">
-                                查看計畫
+                                ${t('add:viewPlan')}
                             </button>
                         </div>
                         <div class="text-sm text-wabi-text-secondary">
-                            <p><strong class="text-wabi-text-primary">名稱：</strong>${escapeHTML(amort.name)}</p>
-                            <p><strong class="text-wabi-text-primary">期數進度：</strong>${amort.completedPeriods} / ${amort.periods} 期</p>
-                            <p><strong class="text-wabi-text-primary">總金額：</strong>${formatCurrency(amort.totalAmount)}</p>
+                            <p><strong class="text-wabi-text-primary">${t('add:nameLabel')}</strong>${escapeHTML(amort.name)}</p>
+                            <p><strong class="text-wabi-text-primary">${t('add:periodProgress', { completed: amort.completedPeriods, total: amort.periods })}</strong></p>
+                            <p><strong class="text-wabi-text-primary">${t('add:totalAmountLabel')}</strong>${formatCurrency(amort.totalAmount)}</p>
                         </div>
                     `;
                     const header = this.app.appContainer.querySelector('.page .flex.items-center.pb-2');
@@ -897,7 +898,7 @@ export class AddPage {
 
         if (isEditMode) {
             document.getElementById('delete-record-btn').addEventListener('click', async () => {
-                if (await customConfirm('確定要刪除這筆紀錄嗎？')) {
+                if (await customConfirm(t('add:confirmDeleteRecord'))) {
                     const id = parseInt(recordId, 10);
                     const record = await this.app.dataService.getRecord(id);
                     const associatedDebtId = record?.debtId;
@@ -905,18 +906,18 @@ export class AddPage {
                     await this.app.dataService.deleteRecord(id);
                     
                     if (associatedDebtId) {
-                        if (await customConfirm('此紀錄有關聯的欠款，是否也要一併刪除該欠款？')) {
+                        if (await customConfirm(t('add:confirmDeleteWithDebt'))) {
                             await this.app.dataService.deleteDebt(associatedDebtId);
-                            showToast('紀錄與關聯欠款已刪除');
+                            showToast(t('add:recordAndDebtDeleted'));
                         } else {
                             // 清除欠款上的反向引用，避免留下孤立指標
                             await this.app.dataService.updateDebt(associatedDebtId, {
                                 recordId: null, recordUuid: null
                             });
-                            showToast('紀錄已刪除');
+                            showToast(t('add:recordDeleted'));
                         }
                     } else {
-                        showToast('紀錄已刪除');
+                        showToast(t('add:recordDeleted'));
                     }
                     
                     window.location.hash = 'records';
@@ -933,7 +934,7 @@ export class AddPage {
         let content = key;
         if (key === 'ac') content = 'AC';
         if (key === 'backspace') content = '<i class="fa-solid fa-delete-left"></i>';
-        if (key === 'save') content = isEditMode ? '<span class="font-bold">更新</span>' : '<span class="font-bold">儲存</span>';
+        if (key === 'save') content = isEditMode ? `<span class="font-bold">${t('add:update')}</span>` : `<span class="font-bold">${t('common:buttons.save')}</span>`;
 
         const specialClasses = {
             'save': 'row-span-2 bg-wabi-accent text-wabi-primary',
@@ -967,11 +968,11 @@ export class AddPage {
 
         modal.innerHTML = `
             <div class="bg-wabi-bg rounded-lg max-w-sm w-full p-6 space-y-4">
-                <h3 class="text-lg font-bold text-wabi-primary">選擇帳戶</h3>
+                <h3 class="text-lg font-bold text-wabi-primary">${t('add:selectAccount')}</h3>
                 <div class="space-y-2 max-h-60 overflow-y-auto">
                     ${accountListHtml}
                 </div>
-                <button id="cancel-account-select-btn" class="w-full py-3 bg-wabi-surface border border-wabi-border text-wabi-text-primary rounded-lg">取消</button>
+                <button id="cancel-account-select-btn" class="w-full py-3 bg-wabi-surface border border-wabi-border text-wabi-text-primary rounded-lg">${t('common:buttons.cancel')}</button>
             </div>
         `;
         document.body.appendChild(modal);
@@ -1003,30 +1004,30 @@ export class AddPage {
         modal.innerHTML = `
             <div class="bg-wabi-bg rounded-lg max-w-sm w-full p-6">
                 <h3 class="text-lg font-semibold mb-4 text-wabi-primary">
-                    <i class="fa-solid fa-coins mr-2"></i>${isReceivable ? '登記收款' : '登記還款'}
+                    <i class="fa-solid fa-coins mr-2"></i>${isReceivable ? t('add:receivePayment') : t('add:makePayment')}
                 </h3>
                 <p class="text-sm text-wabi-text-secondary mb-4">
-                    剩餘金額：<span class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${formatCurrency(remainingAmount)}</span>
+                    ${t('add:remainingAmount')}<span class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${formatCurrency(remainingAmount)}</span>
                 </p>
 
                 <div class="mb-4">
-                    <label class="text-sm font-medium text-wabi-text-primary mb-2 block">還款金額</label>
-                    <input type="number" id="payment-amount-input" value="" min="1" max="${remainingAmount}" step="1" placeholder="輸入金額"
+                    <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${t('add:paymentAmountLabel')}</label>
+                    <input type="number" id="payment-amount-input" value="" min="1" max="${remainingAmount}" step="1" placeholder="${t('add:enterAmountPlaceholder')}"
                            class="w-full p-3 bg-wabi-surface border border-wabi-border rounded-lg text-wabi-text-primary text-lg">
                 </div>
 
                 <div class="flex gap-2 mb-4">
                     <button id="pay-full-btn" class="flex-1 py-2 text-sm font-medium text-wabi-primary border border-wabi-primary rounded-lg bg-wabi-primary/10">
-                        <i class="fa-solid fa-check-double mr-1"></i>全額還清
+                        <i class="fa-solid fa-check-double mr-1"></i>${t('add:payInFull')}
                     </button>
                 </div>
 
                 <div class="flex gap-3">
                     <button id="confirm-payment-btn" class="flex-1 bg-wabi-primary hover:bg-wabi-primary/90 text-wabi-surface font-bold py-3 rounded-lg transition-colors">
-                        確認
+                        ${t('common:buttons.confirm')}
                     </button>
                     <button id="cancel-payment-btn" class="px-6 bg-wabi-border hover:bg-wabi-border text-wabi-text-primary py-3 rounded-lg transition-colors">
-                        取消
+                        ${t('common:buttons.cancel')}
                     </button>
                 </div>
             </div>
@@ -1055,18 +1056,18 @@ export class AddPage {
             const amount = parseFloat(amountInput.value);
 
             if (!amount || amount <= 0) {
-                showToast('請輸入有效金額', 'error');
+                showToast(t('errors:validation.invalidAmount'), 'error');
                 return;
             }
 
             if (amount > remainingAmount) {
-                showToast(`金額不能超過剩餘金額 ${formatCurrency(remainingAmount)}`, 'error');
+                showToast(t('add:amountExceedsRemaining', { amount: formatCurrency(remainingAmount) }), 'error');
                 return;
             }
 
             await this.app.dataService.settleDebt(debt.id, amount);
             closeModal();
-            showToast('還款成功！');
+            showToast(t('add:paymentSuccessful'));
             // Re-render
             const params = new URLSearchParams();
             if(recordId) params.append('id', recordId);

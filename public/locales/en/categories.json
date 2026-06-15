@@ -1,0 +1,19 @@
+{
+  "food": "Food & Dining",
+  "life": "Daily Life",
+  "traffic": "Transportation",
+  "fun": "Entertainment",
+  "medi": "Medical",
+  "edu": "Education",
+  "debt_repayment": "Debt Repayment",
+  "another": "Other",
+  "salary": "Salary",
+  "bonus": "Bonus",
+  "pocket": "Allowance",
+  "parttime": "Part-time",
+  "invest": "Investment",
+  "interest": "Interest",
+  "debt_collection": "Debt Collection",
+  "another_income": "Other Income",
+  "unknown": "Unknown Category"
+}
