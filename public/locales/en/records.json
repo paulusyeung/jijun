@@ -28,5 +28,9 @@
   "titleYearMonth": "{{month}}/{{year}}",
   "titleDateRangeSameMonth": "{{month}}/{{startDay}} - {{endDay}}, {{year}}",
   "titleDateRangeSameYear": "{{startMonth}}/{{startDay}} - {{endMonth}}/{{endDay}}, {{year}}",
-  "titleDateRangeDiffYear": "{{startMonth}}/{{startDay}}, {{startYear}} - {{endMonth}}/{{endDay}}, {{endYear}}"
+  "titleDateRangeDiffYear": "{{startMonth}}/{{startDay}}, {{startYear}} - {{endMonth}}/{{endDay}}, {{endYear}}",
+  "currencyOriginal": "Original",
+  "currencyConverted": "Converted",
+  "currencyBoth": "Both",
+  "currencyToggle": "Display mode"
 }

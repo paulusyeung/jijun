@@ -17,6 +17,7 @@
   "iconLabel": "Icon",
   "searchIconPlaceholder": "Search icons (e.g. wallet, car)",
   "customIconPlaceholder": "Custom icon class (e.g. fa-solid fa-rocket)",
+  "baseCurrency": "Base Currency",
   "previewLabel": "Preview",
   "newLedgerName": "New Ledger",
   "createButton": "Create",

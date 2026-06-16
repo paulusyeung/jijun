@@ -187,14 +187,81 @@ export function customAlert(message, title = '提示') {
     });
 }
 
-export function formatCurrency(amount) {
+export const CURRENCIES = [
+  { code: 'AUD', symbol: 'A$',  nameKey: 'currencies:aud', digits: 2 },
+  { code: 'CAD', symbol: 'C$',  nameKey: 'currencies:cad', digits: 2 },
+  { code: 'CHF', symbol: 'CHF', nameKey: 'currencies:chf', digits: 2 },
+  { code: 'CNY', symbol: '¥',   nameKey: 'currencies:cny', digits: 2 },
+  { code: 'EUR', symbol: '€',   nameKey: 'currencies:eur', digits: 2 },
+  { code: 'GBP', symbol: '£',   nameKey: 'currencies:gbp', digits: 2 },
+  { code: 'HKD', symbol: 'HK$', nameKey: 'currencies:hkd', digits: 2 },
+  { code: 'IDR', symbol: 'Rp',  nameKey: 'currencies:idr', digits: 0 },
+  { code: 'JPY', symbol: '¥',   nameKey: 'currencies:jpy', digits: 0 },
+  { code: 'KRW', symbol: '₩',   nameKey: 'currencies:krw', digits: 0 },
+  { code: 'MYR', symbol: 'RM',  nameKey: 'currencies:myr', digits: 2 },
+  { code: 'NOK', symbol: 'kr',  nameKey: 'currencies:nok', digits: 2 },
+  { code: 'NZD', symbol: 'NZ$', nameKey: 'currencies:nzd', digits: 2 },
+  { code: 'PHP', symbol: '₱',   nameKey: 'currencies:php', digits: 2 },
+  { code: 'SEK', symbol: 'kr',  nameKey: 'currencies:sek', digits: 2 },
+  { code: 'SGD', symbol: 'S$',  nameKey: 'currencies:sgd', digits: 2 },
+  { code: 'THB', symbol: '฿',   nameKey: 'currencies:thb', digits: 2 },
+  { code: 'TWD', symbol: 'NT$', nameKey: 'currencies:twd', digits: 0 },
+  { code: 'USD', symbol: '$',   nameKey: 'currencies:usd', digits: 2 },
+  { code: 'VND', symbol: '₫',   nameKey: 'currencies:vnd', digits: 0 },
+];
+
+export function getCurrencySymbol(code) {
+  const c = CURRENCIES.find(c => c.code === code);
+  return c ? c.symbol : code;
+}
+
+export function getCurrencyName(code) {
+  const c = CURRENCIES.find(c => c.code === code);
+  return c ? c.nameKey : code;
+}
+
+export function isValidCurrency(code) {
+  return CURRENCIES.some(c => c.code === code);
+}
+
+export function getDecimalDigits(code) {
+  const c = CURRENCIES.find(c => c.code === code);
+  return c ? c.digits : 2;
+}
+
+export function formatCurrency(amount, currency) {
   if (isNaN(amount)) return '0'
+  if (currency) {
+    const code = currency.toUpperCase();
+    try {
+      return new Intl.NumberFormat(_resolveLocale(), {
+        style: 'currency',
+        currency: code,
+        minimumFractionDigits: getDecimalDigits(code),
+        maximumFractionDigits: getDecimalDigits(code)
+      }).format(amount);
+    } catch (e) {
+      const sym = getCurrencySymbol(code);
+      return `${sym}${amount.toLocaleString(_resolveLocale(), { minimumFractionDigits: getDecimalDigits(code), maximumFractionDigits: getDecimalDigits(code) })}`;
+    }
+  }
+  // Fallback: resolve from active ledger's baseCurrency (accessed via window.app)
+  if (window.app && window.app.dataService) {
+    const ledgerId = window.app.dataService.activeLedgerId;
+    // We'll try to get ledger but it's async - fallback to TWD
+  }
   return new Intl.NumberFormat(_resolveLocale(), {
     style: 'currency',
     currency: 'TWD',
     minimumFractionDigits: 0,
     maximumFractionDigits: 2
   }).format(amount).replace('NT$', '$')
+}
+
+export function formatOriginalWithBase(amount, currency, exchangeRate, baseCurrency) {
+  const original = formatCurrency(amount, currency);
+  const converted = formatCurrency(amount * (exchangeRate ?? 1), baseCurrency);
+  return `${original} (${converted})`;
 }
 
 /**

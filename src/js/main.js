@@ -257,6 +257,8 @@ class EasyAccountingApp {
                         const newRecord = {
                             type: item.recordType || 'expense',
                             amount: generateAmount,
+                            currency: item.currency || undefined,
+                            exchangeRate: item.exchangeRate ?? undefined,
                             category: item.category,
                             description: `${item.name} (${t('common:amortization.periodLabel', { current: completedPeriods + 1, total: item.periods })})`,
                             date: nextDueDate,

@@ -52,6 +52,10 @@ export class RecordsPage {
                         <p class="text-wabi-text-primary text-sm font-medium leading-normal">${t('records:account')}</p>
                         <i class="fa-solid fa-chevron-down text-xs text-wabi-text-secondary"></i>
                     </button>
+                    <button id="records-currency-toggle" class="h-9 shrink-0 flex items-center justify-center gap-x-1.5 rounded-full bg-wabi-surface px-3 border border-wabi-border" title="${t('records:currencyToggle')}">
+                        <i class="fa-solid fa-dollar-sign text-xs"></i>
+                        <span id="records-currency-mode-label" class="text-xs font-medium">${t('records:currencyConverted')}</span>
+                    </button>
                 </div>
 
                 <!-- Summary Cards -->

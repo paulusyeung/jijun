@@ -257,10 +257,10 @@ export class StatisticsManager {
         this.renderExpenseDonutChart(stats.expenseByCategory);
         this.renderIncomeDonutChart(stats.incomeByCategory);
         this.renderAnnualHeatmap(dateRange);
-        this.renderTopExpenses(stats.records); // Pass records
+        this.renderTopExpenses(stats.records, stats.baseCurrency); // Pass records
     }
 
-    renderTopExpenses(records) {
+    renderTopExpenses(records, baseCurrency) {
         const topList = records
             .filter(r => r.type === 'expense')
             .sort((a, b) => b.amount - a.amount)
@@ -274,27 +274,40 @@ export class StatisticsManager {
             return;
         }
         
-        container.innerHTML = topList.map((r, index) => {
+        container.innerHTML = topList.map((r) => {
             const category = this.categoryManager.getCategoryById('expense', r.category);
             const categoryName = category ? category.name : (r.category === 'others' ? t('stats:others') : r.category);
             const icon = category ? category.icon : 'fa-solid fa-question';
+            const color = category ? (category.color || 'bg-gray-400') : 'bg-gray-400';
+            const displayAmount = formatCurrency(r.amount, baseCurrency);
+            const isForeignCurrency = r.currency && r.currency !== baseCurrency;
+            const currencyBadge = isForeignCurrency
+                ? `<span class="text-[0.6rem] font-bold text-wabi-text-secondary bg-wabi-bg px-1.5 rounded ml-1 whitespace-nowrap">${r.currency}${r.exchangeRate != null ? ` ×${r.exchangeRate}` : ''}</span>`
+                : '';
+            const colorStyle = color.startsWith('#') ? `style="background-color: ${color}"` : '';
+            const colorClass = !color.startsWith('#') ? color : '';
             
             return `
-                <div class="flex items-center justify-between p-3 rounded-lg bg-wabi-bg border border-wabi-border">
-                    <div class="flex items-center gap-3">
-                        <div class="flex size-8 items-center justify-center rounded-full bg-wabi-expense/20 text-wabi-expense font-bold text-xs">
-                             ${index + 1}
+                <div class="flex items-center gap-4 bg-wabi-surface px-2 min-h-[72px] py-2 justify-between rounded-lg border border-wabi-border">
+                    <div class="flex items-center gap-4 flex-1 min-w-0">
+                        <div class="flex items-center justify-center rounded-lg ${colorClass} text-white shrink-0 size-12" ${colorStyle}>
+                            <i class="${icon} text-2xl"></i>
                         </div>
-                        <div>
-                             <p class="text-sm font-bold text-wabi-text-primary">${escAttr(r.description || categoryName)}</p>
-                             <div class="flex items-center gap-2 text-xs text-wabi-text-secondary">
-                                 <span><i class="${icon} mr-1"></i>${escAttr(categoryName)}</span>
-                                 <span>•</span>
-                                 <span>${r.date}</span>
-                             </div>
+                        <div class="flex flex-col justify-center min-w-0">
+                            <div class="flex items-center gap-2">
+                                <p class="text-wabi-text-primary text-base font-medium line-clamp-1">${escAttr(r.description || categoryName)}</p>
+                                ${currencyBadge}
+                            </div>
+                            <p class="text-wabi-text-secondary text-sm font-normal line-clamp-2 break-all">
+                                <i class="${icon} mr-1"></i>${escAttr(categoryName)}
+                                <span class="mx-1">•</span>
+                                ${r.date}
+                            </p>
                         </div>
                     </div>
-                    <span class="font-bold text-wabi-expense">${formatCurrency(r.amount)}</span>
+                    <div class="shrink-0 text-right">
+                        <p class="text-wabi-expense text-base font-medium whitespace-nowrap">${displayAmount}</p>
+                    </div>
                 </div>
             `;
         }).join('');

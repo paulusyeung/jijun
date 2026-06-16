@@ -7,7 +7,7 @@ const openDB = window.idb?.openDB || (() => {
 class DataService {
   constructor() {
     this.dbName = 'EasyAccountingDB'
-    this.dbVersion = 13 // Schema version 13: categoryGroups (分類群組)
+    this.dbVersion = 14 // Schema version 14: multi-currency support (currency, exchangeRate, baseCurrency)
     this.db = null
     this.useLocalStorage = false
     this.hookProvider = null; // Function to trigger hooks
@@ -315,6 +315,40 @@ class DataService {
                 }
 
                 console.info('[Migration v13] categoryGroups store created and default groups seeded.');
+            }
+            // Schema version 14: Multi-currency support
+            if (oldVersion < 14) {
+                // Add currency and exchangeRate fields to records store (optional)
+                // Existing records get currency: undefined, exchangeRate: undefined
+                // Read-time fallback handles them: record.currency || ledger.baseCurrency, record.exchangeRate ?? 1
+                if (db.objectStoreNames.contains('records')) {
+                    const store = transaction.objectStore('records');
+                    if (!store.indexNames.contains('currency')) {
+                        store.createIndex('currency', 'currency');
+                    }
+                }
+                // Add currency field to accounts store (optional)
+                if (db.objectStoreNames.contains('accounts')) {
+                    const store = transaction.objectStore('accounts');
+                    if (!store.indexNames.contains('currency')) {
+                        store.createIndex('currency', 'currency');
+                    }
+                }
+                // Add currency field to debts store (optional)
+                if (db.objectStoreNames.contains('debts')) {
+                    const store = transaction.objectStore('debts');
+                    if (!store.indexNames.contains('currency')) {
+                        store.createIndex('currency', 'currency');
+                    }
+                }
+                // Add currency field to amortizations store (optional)
+                if (db.objectStoreNames.contains('amortizations')) {
+                    const store = transaction.objectStore('amortizations');
+                    if (!store.indexNames.contains('currency')) {
+                        store.createIndex('currency', 'currency');
+                    }
+                }
+                console.info('[Migration v14] currency/exchangeRate fields added to records, accounts, debts, amortizations.');
             }
           }
         })
@@ -1040,6 +1074,10 @@ class DataService {
     }
     let records = await this.getRecords(filters);
 
+    // Get ledger base currency for conversion
+    const ledger = await this.getLedger(this.activeLedgerId);
+    const baseCurrency = ledger?.baseCurrency || 'TWD';
+
     if (offsetTransfers) {
         records = records.filter(r => r.category !== 'transfer');
     }
@@ -1072,7 +1110,10 @@ class DataService {
     const adjustedRecords = [];
 
     records.forEach(record => {
-      let effectiveAmount = record.amount;
+      // Convert to base currency first
+      const exchangeRate = record.exchangeRate ?? 1;
+      const baseAmount = record.amount * exchangeRate;
+      let effectiveAmount = baseAmount;
 
       if (record.debtId && debtsMap[record.debtId]) {
         const debt = debtsMap[record.debtId];
@@ -1080,21 +1121,21 @@ class DataService {
         const isReceivable = debt.type === 'receivable';
 
         if (record.type === 'expense' && isReceivable) {
-          const myExpense = Math.max(0, record.amount - (debt.originalAmount || 0));
-          effectiveAmount = isSettled ? myExpense : record.amount;
+          const myExpense = Math.max(0, baseAmount - ((debt.originalAmount ?? 0) * exchangeRate));
+          effectiveAmount = isSettled ? myExpense : baseAmount;
         } else if (record.type === 'income' && isReceivable) {
-          effectiveAmount = isSettled ? record.amount : 0;
+          effectiveAmount = isSettled ? baseAmount : 0;
         } else if (record.type === 'expense' && !isReceivable) {
-          effectiveAmount = isSettled ? record.amount : 0;
+          effectiveAmount = isSettled ? baseAmount : 0;
         } else if (record.type === 'income' && !isReceivable) {
-          effectiveAmount = isSettled ? 0 : record.amount;
+          effectiveAmount = isSettled ? 0 : baseAmount;
         }
       }
 
       if (effectiveAmount === 0) return; // Skip 0 amounts to prevent them from showing up
 
       // create a copy of record to override amount
-      const adjustedRecord = { ...record, amount: effectiveAmount };
+      const adjustedRecord = { ...record, amount: effectiveAmount, baseAmount };
       adjustedRecords.push(adjustedRecord);
 
       if (adjustedRecord.type === 'income') {
@@ -1115,6 +1156,7 @@ class DataService {
     })
 
     stats.records = adjustedRecords;
+    stats.baseCurrency = baseCurrency;
 
     return stats
   }
@@ -2352,6 +2394,8 @@ class DataService {
           contactUuid,
           originalAmount: amount,
           remainingAmount: amount,
+          currency: debt.currency || undefined,
+          exchangeRate: debt.exchangeRate ?? undefined,
           recordId: debt.recordId || null,
           ...(recordUuid ? { recordUuid } : {}),
           date: debt.date,
@@ -2516,6 +2560,8 @@ class DataService {
           type: debt.type === 'receivable' ? 'income' : 'expense',
           category: debt.type === 'receivable' ? 'debt_collection' : 'debt_repayment',
           amount: amount,
+          currency: debt.currency || undefined,
+          exchangeRate: debt.exchangeRate ?? undefined,
           date: new Date().toISOString().split('T')[0],
           description: debt.type === 'receivable' 
             ? `收回欠款：${contactName} - ${debt.description}${!isFullySettled ? ` (部分)` : ''}`
@@ -2636,6 +2682,7 @@ class DataService {
         icon: ledger.icon || 'fa-solid fa-book',
         color: ledger.color || '#334A52',
         type: ledger.type || 'personal',
+        baseCurrency: ledger.baseCurrency || 'TWD',
         uuid: ledger.uuid || this.generateUUID(),
         createdAt: Date.now(),
       };
@@ -2656,7 +2703,11 @@ class DataService {
    */
   async getLedger(id) {
     try {
-      return await this.db.get('ledgers', id);
+      const ledger = await this.db.get('ledgers', id);
+      if (ledger) {
+        ledger.baseCurrency = ledger.baseCurrency || 'TWD';
+      }
+      return ledger;
     } catch (error) {
       console.error(`Failed to get ledger ${id}:`, error);
       return null;

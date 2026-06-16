@@ -136,6 +136,7 @@ export class LedgerManager {
             icon: data.icon || 'fa-solid fa-book',
             color: data.color || LEDGER_COLORS[this.ledgers.length % LEDGER_COLORS.length],
             type: 'personal',
+            baseCurrency: data.baseCurrency || 'TWD',
         });
 
         // 為新帳本建立預設現金帳戶

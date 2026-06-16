@@ -1,5 +1,5 @@
 import { t } from '../i18n.js';
-import { formatDate, formatDateToString, formatCurrency, showToast, escapeHTML, escAttr, calculateAmortizationDetails, customConfirm, triggerHaptic } from '../utils.js';
+import { formatDate, formatDateToString, formatCurrency, formatOriginalWithBase, showToast, escapeHTML, escAttr, calculateAmortizationDetails, customConfirm, triggerHaptic, CURRENCIES, getCurrencySymbol, getDecimalDigits } from '../utils.js';
 
 export class AddPage {
     constructor(app) {
@@ -39,6 +39,24 @@ export class AddPage {
                                     </button>
                                 ` : ''}
                                 ${isEditMode ? '<button id="delete-record-btn" class="text-wabi-expense"><i class="fa-solid fa-trash-can"></i></button>' : ''}
+                            </div>
+                        </div>
+
+                        <!-- Currency Selector & Exchange Rate -->
+                        <div class="mb-4 p-3 bg-wabi-surface/50 rounded-lg border border-wabi-border">
+                            <div class="flex items-center gap-2">
+                                <label class="text-xs text-wabi-text-secondary">${t('add:currency')}</label>
+                                <select id="add-currency-select" class="flex-1 p-1.5 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-wabi-primary">
+                                    ${CURRENCIES.map(c => `<option value="${c.code}">${c.code} (${c.symbol})</option>`).join('')}
+                                </select>
+                            </div>
+                            <div id="add-exchange-rate-container" class="hidden mt-2">
+                                <label class="text-xs text-wabi-text-secondary">
+                                    <span id="add-exchange-rate-label">1 ${'TWD'} = </span>
+                                    <input type="number" id="add-exchange-rate-input" value="1" step="0.01" min="0.0001"
+                                        class="w-24 p-1 bg-wabi-surface border border-wabi-border rounded-lg text-sm outline-none focus:border-wabi-primary inline-block" />
+                                    <span id="add-exchange-rate-base"></span>
+                                </label>
                             </div>
                         </div>
 
@@ -178,8 +196,13 @@ export class AddPage {
         const advancedModeEnabled = !!advancedMode?.value;
 
 
+        // Resolve ledger base currency
+        const activeLedger = await this.app.dataService.getLedger(this.app.dataService.activeLedgerId);
+        const baseCurrency = activeLedger?.baseCurrency || 'TWD';
+
         let currentType = 'expense';
         let currentAmount = '0';
+        let currentCurrency = baseCurrency;
         let selectedCategory = null;
         let selectedAccountId = null; // New state for multi-account mode
         let currentDate = formatDateToString(new Date());
@@ -192,6 +215,41 @@ export class AddPage {
 
         const amountDisplay = document.getElementById('add-amount-display');
         const categoryGrid = document.getElementById('add-category-grid');
+
+        // Currency selector logic
+        const currencySelect = document.getElementById('add-currency-select');
+        const exchangeRateContainer = document.getElementById('add-exchange-rate-container');
+        const exchangeRateInput = document.getElementById('add-exchange-rate-input');
+        const exchangeRateLabel = document.getElementById('add-exchange-rate-label');
+        const exchangeRateBase = document.getElementById('add-exchange-rate-base');
+
+        const updateExchangeRateUI = () => {
+            if (currentCurrency === baseCurrency) {
+                exchangeRateContainer.classList.add('hidden');
+            } else {
+                exchangeRateContainer.classList.remove('hidden');
+                exchangeRateLabel.textContent = `1 ${currentCurrency} = `;
+                exchangeRateBase.textContent = baseCurrency;
+                // Pre-fill from localStorage recent rates
+                const recentRates = JSON.parse(localStorage.getItem('recentRates') || '{}');
+                const cacheKey = `${currentCurrency}_${baseCurrency}`;
+                if (recentRates[cacheKey]) {
+                    exchangeRateInput.value = recentRates[cacheKey];
+                } else {
+                    exchangeRateInput.value = '';
+                }
+            }
+        };
+
+        if (currencySelect) {
+            currencySelect.value = currentCurrency;
+            currencySelect.addEventListener('change', () => {
+                currentCurrency = currencySelect.value;
+                updateExchangeRateUI();
+                amountDisplay.textContent = formatCurrency(currentAmount, currentCurrency);
+            });
+            updateExchangeRateUI();
+        }
 
         // Back Button Logic
         document.getElementById('add-page-close-btn').addEventListener('click', () => {
@@ -224,7 +282,7 @@ export class AddPage {
                     if (tempData.amount) currentAmount = tempData.amount.toString();
                     if (tempData.category) selectedCategory = tempData.category;
                     if (tempData.description && noteInput) noteInput.value = tempData.description;
-                    if (amountDisplay) amountDisplay.textContent = formatCurrency(currentAmount);
+                    if (amountDisplay) amountDisplay.textContent = formatCurrency(currentAmount, currentCurrency);
                     sessionStorage.removeItem('temp_add_data');
                 } catch(e) {
                     console.error('Error applying temp data:', e);
@@ -340,7 +398,7 @@ export class AddPage {
                 const freq = document.getElementById('installment-frequency')?.value || 'monthly';
                 
                 const { amountPerPeriod } = calculateAmortizationDetails(principal, periods, annualRate, freq, decimalStrategy);
-                display.textContent = `$${amountPerPeriod.toLocaleString('zh-TW')}`;
+                display.textContent = formatCurrency(amountPerPeriod, currentCurrency);
             };
             ['installment-periods', 'installment-downpayment', 'installment-interest'].forEach(id => {
                 document.getElementById(id)?.addEventListener('input', calcPreview);
@@ -507,12 +565,22 @@ export class AddPage {
             
             const { amountPerPeriod } = calculateAmortizationDetails(principal, instPeriods, instRate, instFrequency, decimalStrategy);
 
+            const instExchangeRate = currentCurrency === baseCurrency ? 1 : parseFloat(exchangeRateInput.value) || 1;
+            // Save recent rate
+            if (currentCurrency !== baseCurrency && instExchangeRate > 0) {
+                const recentRates = JSON.parse(localStorage.getItem('recentRates') || '{}');
+                recentRates[`${currentCurrency}_${baseCurrency}`] = instExchangeRate;
+                localStorage.setItem('recentRates', JSON.stringify(recentRates));
+            }
+
             await this.app.dataService.addAmortization({
                 name: instName,
                 type: installmentType,
                 recordType: currentType,
                 category: selectedCategory,
                 totalAmount: amount,
+                currency: currentCurrency,
+                exchangeRate: instExchangeRate,
                 downPayment: instDownPayment,
                 interestRate: instRate,
                 periods: instPeriods,
@@ -532,10 +600,22 @@ export class AddPage {
         };
 
         const saveRegularRecord = async (amount) => {
+            const recCurrency = currentCurrency || baseCurrency;
+            const recExchangeRate = recCurrency === baseCurrency ? 1 : parseFloat(exchangeRateInput.value) || 1;
+
+            // Save recent rate to localStorage for auto-fill
+            if (recCurrency !== baseCurrency && recExchangeRate > 0) {
+                const recentRates = JSON.parse(localStorage.getItem('recentRates') || '{}');
+                recentRates[`${recCurrency}_${baseCurrency}`] = recExchangeRate;
+                localStorage.setItem('recentRates', JSON.stringify(recentRates));
+            }
+
             const recordData = {
                 type: currentType,
                 category: selectedCategory,
                 amount: amount,
+                currency: recCurrency,
+                exchangeRate: recExchangeRate,
                 description: noteInput.value,
                 date: currentDate,
                 accountId: advancedModeEnabled ? selectedAccountId : null
@@ -567,6 +647,8 @@ export class AddPage {
                             type: debtType,
                             contactId: debtContactId,
                             amount: amount,
+                            currency: recCurrency,
+                            exchangeRate: recExchangeRate,
                             date: currentDate,
                             description: noteInput.value || selectedCategory,
                             recordId: numericId
@@ -590,6 +672,8 @@ export class AddPage {
                         type: debtType,
                         contactId: debtContactId,
                         amount: amount,
+                        currency: recCurrency,
+                        exchangeRate: recExchangeRate,
                         date: currentDate,
                         description: noteInput.value || selectedCategory,
                         recordId: newRecordId
@@ -639,7 +723,7 @@ export class AddPage {
                     showToast(t('add:enterAmountAndCategory'), 'error');
                 }
             }
-            amountDisplay.textContent = formatCurrency(currentAmount);
+            amountDisplay.textContent = formatCurrency(currentAmount, currentCurrency);
         };
 
         if (isEditMode) {
@@ -649,13 +733,21 @@ export class AddPage {
             if (recordToEdit) {
                 currentType = recordToEdit.type;
                 currentAmount = String(recordToEdit.amount);
+                currentCurrency = recordToEdit.currency || baseCurrency;
                 selectedCategory = recordToEdit.category;
                 currentDate = recordToEdit.date;
                 noteInput.value = recordToEdit.description;
                 if (advancedModeEnabled) {
                     selectedAccountId = recordToEdit.accountId;
                 }
-                amountDisplay.textContent = formatCurrency(currentAmount);
+                if (currencySelect) currencySelect.value = currentCurrency;
+                if (recordToEdit.currency && recordToEdit.currency !== baseCurrency && recordToEdit.exchangeRate) {
+                    exchangeRateInput.value = recordToEdit.exchangeRate;
+                    updateExchangeRateUI();
+                } else {
+                    updateExchangeRateUI();
+                }
+                amountDisplay.textContent = formatCurrency(currentAmount, currentCurrency);
                 dateDisplay.textContent = formatDate(currentDate, 'short');
                 dateInput.value = currentDate;
 
@@ -710,7 +802,7 @@ export class AddPage {
                                 <!-- Progress bar -->
                                 <div class="mb-3">
                                     <div class="flex justify-between text-xs text-wabi-text-secondary mb-1">
-                                        <span>${t('add:remaining')}${formatCurrency(remainingAmount)}</span>
+                                        <span>${t('add:remaining')}${formatCurrency(remainingAmount, currentCurrency)}</span>
                                         <span>${t('add:percentPaid', { percent: paidPercent })}</span>
                                     </div>
                                     <div class="w-full bg-wabi-border rounded-full h-2">
@@ -730,7 +822,7 @@ export class AddPage {
                                 <div class="text-sm text-wabi-text-secondary">
                                     <p><strong class="text-wabi-text-primary">${t('debts:contactLabel')}</strong>${contactName}</p>
                                     <p><strong class="text-wabi-text-primary">${t('debts:typeLabel')}</strong>${isReceivable ? t('debts:receivable') : t('debts:payable')}</p>
-                                    <p><strong class="text-wabi-text-primary">${t('debts:originalAmountLabel')}</strong>${formatCurrency(originalAmount)}</p>
+                                    <p><strong class="text-wabi-text-primary">${t('debts:originalAmountLabel')}</strong>${formatCurrency(originalAmount, currentCurrency)}</p>
                                 </div>
                             `}
                         `;
@@ -818,7 +910,7 @@ export class AddPage {
                         <div class="text-sm text-wabi-text-secondary">
                             <p><strong class="text-wabi-text-primary">${t('add:nameLabel')}</strong>${escapeHTML(amort.name)}</p>
                             <p><strong class="text-wabi-text-primary">${t('add:periodProgress', { completed: amort.completedPeriods, total: amort.periods })}</strong></p>
-                            <p><strong class="text-wabi-text-primary">${t('add:totalAmountLabel')}</strong>${formatCurrency(amort.totalAmount)}</p>
+                            <p><strong class="text-wabi-text-primary">${t('add:totalAmountLabel')}</strong>${formatCurrency(amort.totalAmount, currentCurrency)}</p>
                         </div>
                     `;
                     const header = this.app.appContainer.querySelector('.page .flex.items-center.pb-2');
@@ -1007,7 +1099,7 @@ export class AddPage {
                     <i class="fa-solid fa-coins mr-2"></i>${isReceivable ? t('add:receivePayment') : t('add:makePayment')}
                 </h3>
                 <p class="text-sm text-wabi-text-secondary mb-4">
-                    ${t('add:remainingAmount')}<span class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${formatCurrency(remainingAmount)}</span>
+                    ${t('add:remainingAmount')}<span class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${formatCurrency(remainingAmount, currentCurrency)}</span>
                 </p>
 
                 <div class="mb-4">
@@ -1061,7 +1153,7 @@ export class AddPage {
             }
 
             if (amount > remainingAmount) {
-                showToast(t('add:amountExceedsRemaining', { amount: formatCurrency(remainingAmount) }), 'error');
+                showToast(t('add:amountExceedsRemaining', { amount: formatCurrency(remainingAmount, currentCurrency) }), 'error');
                 return;
             }
 

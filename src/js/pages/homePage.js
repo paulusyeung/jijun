@@ -184,7 +184,7 @@ export class HomePage {
                             <p class="text-sm text-wabi-text-secondary line-clamp-2 break-all">${record.description || formatDate(record.date, 'short')}</p>
                         </div>
                         <div class="text-right">
-                            <p class="font-medium ${isIncome ? 'text-wabi-income' : 'text-wabi-expense'}">${isIncome ? '+' : '-'} ${formatCurrency(record.amount)}</p>
+                            <p class="font-medium ${isIncome ? 'text-wabi-income' : 'text-wabi-expense'}">${isIncome ? '+' : '-'} ${formatCurrency(record.amount, record.currency)}</p>
                             <p class="text-xs text-wabi-text-secondary">${formatDate(record.date, 'short')}</p>
                         </div>
                     </div>

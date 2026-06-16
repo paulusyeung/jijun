@@ -17,6 +17,7 @@
   "iconLabel": "圖示",
   "searchIconPlaceholder": "搜尋圖示（英文，如 wallet、car）",
   "customIconPlaceholder": "自訂圖示 class（如 fa-solid fa-rocket）",
+  "baseCurrency": "本位幣",
   "previewLabel": "預覽",
   "newLedgerName": "新帳本",
   "createButton": "建立",

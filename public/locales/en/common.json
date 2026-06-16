@@ -63,7 +63,29 @@
     "on": "On",
     "off": "Off",
     "enabled": "Enabled",
-    "disabled": "Disabled"
+    "disabled": "Disabled",
+    "currency": {
+      "TWD": "New Taiwan Dollar",
+      "JPY": "Japanese Yen",
+      "USD": "US Dollar",
+      "EUR": "Euro",
+      "GBP": "British Pound",
+      "KRW": "South Korean Won",
+      "CNY": "Chinese Yuan",
+      "HKD": "Hong Kong Dollar",
+      "SGD": "Singapore Dollar",
+      "THB": "Thai Baht",
+      "AUD": "Australian Dollar",
+      "NZD": "New Zealand Dollar",
+      "CAD": "Canadian Dollar",
+      "CHF": "Swiss Franc",
+      "SEK": "Swedish Krona",
+      "NOK": "Norwegian Krone",
+      "MYR": "Malaysian Ringgit",
+      "IDR": "Indonesian Rupiah",
+      "PHP": "Philippine Peso",
+      "VND": "Vietnamese Dong"
+    }
   },
   "messages": {
     "loading": "Loading...",

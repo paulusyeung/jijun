@@ -319,8 +319,8 @@ export class DebtManager {
               </div>
             </div>
             <div class="text-right">
-              <p class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${isReceivable ? '+' : '-'}${formatCurrency(remainingAmount)}</p>
-              ${hasPartialPayments ? `<p class="text-xs text-wabi-text-secondary line-through">${formatCurrency(originalAmount)}</p>` : ''}
+              <p class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${isReceivable ? '+' : '-'}${formatCurrency(remainingAmount, debt.currency)}</p>
+              ${hasPartialPayments ? `<p class="text-xs text-wabi-text-secondary line-through">${formatCurrency(originalAmount, debt.currency)}</p>` : ''}
               <p class="text-xs text-wabi-text-secondary">${formatDate(debt.date, 'short')}</p>
             </div>
           </div>
@@ -328,7 +328,7 @@ export class DebtManager {
           ${hasPartialPayments ? `
             <div class="mt-2">
               <div class="flex justify-between text-xs text-wabi-text-secondary mb-1">
-                <span>${isReceivable ? t('debts:progress.received') : t('debts:progress.repaid')} ${formatCurrency(paidAmount)}</span>
+                <span>${isReceivable ? t('debts:progress.received') : t('debts:progress.repaid')} ${formatCurrency(paidAmount, debt.currency)}</span>
                 <span>${progressPercent}%</span>
               </div>
               <div class="w-full bg-wabi-bg rounded-full h-1.5">
@@ -511,7 +511,7 @@ export class DebtManager {
       <div class="bg-wabi-bg rounded-lg max-w-sm w-full p-6">
         <h3 class="text-lg font-semibold mb-4 text-wabi-primary">${isReceivable ? t('debts:partialPayment.titleReceivable') : t('debts:partialPayment.titlePayable')}</h3>
         <p class="text-sm text-wabi-text-secondary mb-4">${escAttr(contactName)} - ${escAttr(debt.description || t('debts:label.noNote'))}</p>
-        <p class="text-sm text-wabi-text-secondary mb-2">${t('debts:label.remaining')}<span class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${formatCurrency(remainingAmount)}</span></p>
+        <p class="text-sm text-wabi-text-secondary mb-2">${t('debts:label.remaining')}<span class="font-bold ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">${formatCurrency(remainingAmount, debt.currency)}</span></p>
         
         <div class="mb-6">
           <label class="text-sm font-medium text-wabi-text-primary mb-2 block">${isReceivable ? t('debts:partialPayment.amountLabelReceivable') : t('debts:partialPayment.amountLabelPayable')}</label>
@@ -553,7 +553,7 @@ export class DebtManager {
       }
 
       if (amount > remainingAmount) {
-        customAlert(t('debts:partialPayment.exceedsRemaining', { amount: formatCurrency(remainingAmount) }));
+        customAlert(t('debts:partialPayment.exceedsRemaining', { amount: formatCurrency(remainingAmount, debt.currency) }));
         return;
       }
 
@@ -592,7 +592,7 @@ export class DebtManager {
                 </div>
                 <div>
                   <p class="font-medium ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">
-                    ${isReceivable ? '+' : '-'}${formatCurrency(payment.amount)}
+                    ${isReceivable ? '+' : '-'}${formatCurrency(payment.amount, debt.currency)}
                   </p>
                   <p class="text-xs text-wabi-text-secondary">${formatDate(payment.date, 'short')}</p>
                 </div>
@@ -604,17 +604,17 @@ export class DebtManager {
         <div class="border-t border-wabi-border pt-3">
           <div class="flex justify-between text-sm mb-2">
             <span class="text-wabi-text-secondary">${t('debts:history.originalAmount')}</span>
-            <span class="font-medium">${formatCurrency(debt.originalAmount || debt.amount)}</span>
+            <span class="font-medium">${formatCurrency(debt.originalAmount || debt.amount, debt.currency)}</span>
           </div>
           <div class="flex justify-between text-sm mb-2">
             <span class="text-wabi-text-secondary">${isReceivable ? t('debts:history.totalReceived') : t('debts:history.totalRepaid')}</span>
             <span class="font-medium ${isReceivable ? 'text-wabi-income' : 'text-wabi-expense'}">
-              ${formatCurrency(payments.reduce((sum, p) => sum + p.amount, 0))}
+              ${formatCurrency(payments.reduce((sum, p) => sum + p.amount, 0), debt.currency)}
             </span>
           </div>
           <div class="flex justify-between text-sm">
             <span class="text-wabi-text-secondary">${t('debts:history.remaining')}</span>
-            <span class="font-bold">${formatCurrency(debt.remainingAmount || 0)}</span>
+            <span class="font-bold">${formatCurrency(debt.remainingAmount || 0, debt.currency)}</span>
           </div>
         </div>
 
@@ -794,9 +794,9 @@ export class DebtManager {
     const descText = debt.description ? `「${debt.description}」` : '';
 
     if (isReceivable) {
-      message = t('debts:reminder.messageReceivable', { name: contactName, date: debt.date, description: descText, amount: formatCurrency(remainingAmount) });
+      message = t('debts:reminder.messageReceivable', { name: contactName, date: debt.date, description: descText, amount: formatCurrency(remainingAmount, debt.currency) });
     } else {
-      message = t('debts:reminder.messagePayable', { name: contactName, date: debt.date, description: descText, amount: formatCurrency(remainingAmount) });
+      message = t('debts:reminder.messagePayable', { name: contactName, date: debt.date, description: descText, amount: formatCurrency(remainingAmount, debt.currency) });
     }
 
     const modal = document.createElement('div');

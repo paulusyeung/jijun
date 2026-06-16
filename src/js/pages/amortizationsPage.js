@@ -1,5 +1,5 @@
 // ==================== 攤提/折舊/分期管理頁面 ====================
-import { showToast, escapeHTML, calculateAmortizationDetails, customConfirm } from '../utils.js';
+import { showToast, escapeHTML, calculateAmortizationDetails, customConfirm, formatCurrency } from '../utils.js';
 import { t, getCurrentLanguage } from '../i18n.js';
 import { showAmortizationModal } from '../amortizationModal.js';
 
@@ -124,11 +124,11 @@ export class AmortizationsPage {
                             </div>
                             <div class="flex justify-between text-[11px] text-wabi-text-secondary">
                                 <span>${t('amortizations:progress', { completed: item.completedPeriods, periods: item.periods })}</span>
-                                <span>${t('amortizations:perPeriod', { amount: this._formatAmount(item.amountPerPeriod) })}</span>
+                                <span>${t('amortizations:perPeriod', { amount: formatCurrency(item.amountPerPeriod, item.currency) })}</span>
                             </div>
-                            <div class="mt-2 flex items-center gap-3 text-xs">
-                                <span class="text-wabi-text-secondary">${t('amortizations:totalAmount')} <strong class="text-wabi-text-primary">$${this._formatAmount(item.totalAmount)}</strong></span>
-                                ${item.downPayment ? `<span class="text-wabi-text-secondary">${t('amortizations:downPayment')} <strong class="text-wabi-text-primary">$${this._formatAmount(item.downPayment)}</strong></span>` : ''}
+                            <div class="flex flex-col gap-1 text-right shrink-0">
+                                <span class="text-wabi-text-secondary">${t('amortizations:totalAmount')} <strong class="text-wabi-text-primary">${formatCurrency(item.totalAmount, item.currency)}</strong></span>
+                                ${item.downPayment ? `<span class="text-wabi-text-secondary">${t('amortizations:downPayment')} <strong class="text-wabi-text-primary">${formatCurrency(item.downPayment, item.currency)}</strong></span>` : ''}
                                 ${remaining > 0 && item.status === 'active' ? `<span class="text-wabi-text-secondary">${t('amortizations:nextDue')} <strong class="text-wabi-primary">${item.nextDueDate}</strong></span>` : ''}
                             </div>
                         </div>

@@ -1,6 +1,9 @@
 import { t } from './i18n.js';
-import { formatCurrency, formatDate, getDateRange, escAttr } from './utils.js';
+import { formatCurrency, formatOriginalWithBase, formatDate, getDateRange, escAttr, getCurrencySymbol } from './utils.js';
 import { createDateRangeModal } from './datePickerModal.js';
+
+const DISPLAY_MODES = ['converted', 'original', 'both'];
+const DISPLAY_MODE_KEYS = ['records:currencyConverted', 'records:currencyOriginal', 'records:currencyBoth'];
 
 export class RecordsListManager {
     constructor(dataService, categoryManager, container) {
@@ -11,6 +14,8 @@ export class RecordsListManager {
         this.accounts = []; // Store accounts for display
         this.debtsMap = {}; // Store debts for display
         this.advancedModeEnabled = false;
+        this.baseCurrency = 'TWD';
+        this.displayModeIndex = 0; // 0=converted, 1=original, 2=both
         this.filters = {
             period: 'month',
             type: 'all',
@@ -26,6 +31,17 @@ export class RecordsListManager {
     async init() {
         const advancedMode = await this.dataService.getSetting('advancedAccountModeEnabled');
         this.advancedModeEnabled = !!advancedMode?.value;
+
+        // Load base currency
+        const ledger = await this.dataService.getLedger(this.dataService.activeLedgerId);
+        this.baseCurrency = ledger?.baseCurrency || 'TWD';
+
+        // Load display mode
+        const savedMode = localStorage.getItem(`recordDisplayMode_${this.dataService.activeLedgerId}`);
+        if (savedMode !== null) {
+            this.displayModeIndex = parseInt(savedMode, 10) || 0;
+            if (this.displayModeIndex >= DISPLAY_MODES.length) this.displayModeIndex = 0;
+        }
 
         if (this.advancedModeEnabled) {
             this.accounts = await this.dataService.getAccounts();
@@ -83,7 +99,73 @@ export class RecordsListManager {
         }
     }
 
+    _getEffectiveAmount(record) {
+        return record.amount * (record.exchangeRate ?? 1);
+    }
+
+    _formatRecordAmount(record) {
+        const mode = DISPLAY_MODES[this.displayModeIndex];
+        const converted = this._getEffectiveAmount(record);
+        if (mode === 'original') {
+            return formatCurrency(record.amount, record.currency || this.baseCurrency);
+        } else if (mode === 'both') {
+            return formatOriginalWithBase(record.amount, record.currency || this.baseCurrency, record.exchangeRate ?? 1, this.baseCurrency);
+        }
+        return formatCurrency(converted, this.baseCurrency);
+    }
+
+    _renderCurrencyModeBtn() {
+        const toggle = this.container.querySelector('#records-currency-toggle');
+        const label = this.container.querySelector('#records-currency-mode-label');
+        if (toggle && label) {
+            label.textContent = t(DISPLAY_MODE_KEYS[this.displayModeIndex]);
+            toggle.classList.remove('bg-wabi-primary/10', 'border-wabi-primary');
+            if (this.displayModeIndex !== 0) {
+                toggle.classList.add('bg-wabi-primary/10', 'border-wabi-primary');
+            }
+        }
+    }
+
+    _renderCurrencyModeBtn() {
+        const toggle = this.container.querySelector('#records-currency-toggle');
+        const label = this.container.querySelector('#records-currency-mode-label');
+        if (toggle && label) {
+            label.textContent = t(DISPLAY_MODE_KEYS[this.displayModeIndex]);
+            toggle.classList.remove('bg-wabi-primary/10', 'border-wabi-primary');
+            if (this.displayModeIndex !== 0) {
+                toggle.classList.add('bg-wabi-primary/10', 'border-wabi-primary');
+            }
+        }
+    }
+
+    _formatRecordAmount(record) {
+        const mode = DISPLAY_MODES[this.displayModeIndex];
+        const converted = this._getEffectiveAmount(record);
+        if (mode === 'original') {
+            return formatCurrency(record.amount, record.currency || this.baseCurrency);
+        } else if (mode === 'both') {
+            return formatOriginalWithBase(record.amount, record.currency || this.baseCurrency, record.exchangeRate ?? 1, this.baseCurrency);
+        }
+        return formatCurrency(converted, this.baseCurrency);
+    }
+
+    _getEffectiveAmount(record) {
+        return record.amount * (record.exchangeRate ?? 1);
+    }
+
     setupEventListeners() {
+        // Currency display mode toggle
+        const currencyToggle = this.container.querySelector('#records-currency-toggle');
+        if (currencyToggle) {
+            currencyToggle.addEventListener('click', () => {
+                this.displayModeIndex = (this.displayModeIndex + 1) % DISPLAY_MODES.length;
+                localStorage.setItem(`recordDisplayMode_${this.dataService.activeLedgerId}`, String(this.displayModeIndex));
+                this._renderCurrencyModeBtn();
+                this.renderRecords(this.records); // Re-render with new mode
+            });
+            this._renderCurrencyModeBtn();
+        }
+
         this.container.querySelector('#records-period-filter').addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 const period = e.target.dataset.period;
@@ -372,13 +454,16 @@ export class RecordsListManager {
 
         // 3. Calculate summary from the offset list and update UI
         // Need to consider debt status for correct calculation
+        const baseCurrency = this.baseCurrency || 'TWD';
         const summary = recordsForSummary.reduce((acc, r) => {
             // Exclude debt collection and repayment categories from summary calculation
             if (r.category === 'debt_collection' || r.category === 'debt_repayment') {
                 return acc;
             }
 
-            let effectiveAmount = r.amount;
+            // Convert to base currency for consistent summary
+            const rate = r.exchangeRate ?? 1;
+            let effectiveAmount = r.amount * rate;
             
             // Check if record has associated debt and adjust amount
             if (r.debtId && this.debtsMap[r.debtId]) {
@@ -396,17 +481,18 @@ export class RecordsListManager {
                     // 代墊：還清後扣除代墊金額，不計入自己支出
                     // 因為 r.amount 是總金額 (包含自己的份 + 別人的份)
                     // debt.originalAmount 則是別人的份
-                    const myExpense = Math.max(0, r.amount - (debt.originalAmount || 0));
-                    effectiveAmount = isSettled ? myExpense : r.amount;
+                    const debtRate = debt.exchangeRate ?? 1;
+                    const myExpense = Math.max(0, (r.amount * rate) - ((debt.originalAmount || 0) * debtRate));
+                    effectiveAmount = isSettled ? myExpense : r.amount * rate;
                 } else if (r.type === 'income' && isReceivable) {
                     // 別人還我：還清後才計入收入
-                    effectiveAmount = isSettled ? r.amount : 0;
+                    effectiveAmount = isSettled ? r.amount * rate : 0;
                 } else if (r.type === 'expense' && !isReceivable) {
                     // 還別人錢：還清後計入支出
-                    effectiveAmount = isSettled ? r.amount : 0;
+                    effectiveAmount = isSettled ? r.amount * rate : 0;
                 } else if (r.type === 'income' && !isReceivable) {
                     // 先收別人的錢：還清後不計入收入
-                    effectiveAmount = isSettled ? 0 : r.amount;
+                    effectiveAmount = isSettled ? 0 : r.amount * rate;
                 }
             }
             
@@ -545,6 +631,11 @@ export class RecordsListManager {
                 // Only dim if the effective value becomes 0 (money cancelled out)
                 const shouldDim = hasDebt && isDebtSettled && displayLogic.arrowToZero;
 
+                // Determine record currency display
+                const recordCurrency = record.currency || this.baseCurrency;
+                const isForeignCurrency = record.currency && record.currency !== this.baseCurrency;
+                const currencyBadge = isForeignCurrency ? `<span class="currency-badge text-[0.6rem] font-bold text-wabi-text-secondary bg-wabi-bg px-1.5 rounded ml-1 whitespace-nowrap">${record.currency} ${record.exchangeRate != null ? `×${record.exchangeRate}` : ''}</span>` : '';
+
                 return `
                     <a ${isTransfer ? '' : `href="#add?id=${record.id}"`} class="record-item flex items-center gap-4 bg-wabi-surface px-2 min-h-[72px] py-2 justify-between rounded-lg border border-wabi-border ${isTransfer ? '' : 'hover:border-wabi-primary transition-colors'} ${shouldDim ? 'opacity-60' : ''}">
                     <div class="flex items-center gap-4 flex-1 min-w-0">
@@ -557,6 +648,7 @@ export class RecordsListManager {
                                 ${hasAmortization ? `<i class="fa-solid fa-credit-card text-blue-500 text-sm cursor-pointer amort-link-icon" title="${t('records:tooltipAmortization')}"></i>` : ''}
                                 ${hasDebt ? `<i class="fa-solid fa-handshake text-orange-500 text-sm" title="${t('records:tooltipDebt')}"></i>` : ''}
                                 ${hasDebt && statusLabel ? `<span class="text-xs ${statusClass} px-1.5 py-0.5 rounded">${statusLabel}</span>` : ''}
+                                ${currencyBadge}
                             </div>
                             <p class="text-wabi-text-secondary text-sm font-normal line-clamp-2 break-all">${escAttr(record.description || t('records:noNote'))}</p>
                         </div>
@@ -564,14 +656,14 @@ export class RecordsListManager {
                         <div class="shrink-0 text-right">
                             ${displayLogic.showArrow ? `
                                 <p class="text-wabi-text-secondary text-base font-medium line-through">
-                                    ${isIncome ? '+' : '-'} ${formatCurrency(strikethroughAmount)}
+                                    ${isIncome ? '+' : '-'} ${formatCurrency(strikethroughAmount, recordCurrency)}
                                 </p>
                                 <p class="text-xs font-medium ${arrowColor}">
-                                    → ${isIncome ? '+' : '-'}${formatCurrency(arrowAmount)}
+                                    → ${isIncome ? '+' : '-'}${formatCurrency(arrowAmount, recordCurrency)}
                                 </p>
                             ` : `
                                 <p class="${isIncome ? 'text-wabi-income' : 'text-wabi-expense'} text-base font-medium">
-                                    ${isIncome ? '+' : '-'} ${formatCurrency(mainAmount)}
+                                    ${isIncome ? '+' : '-'} ${this._formatRecordAmount(record)}
                                 </p>
                             `}
                             ${this.advancedModeEnabled ? `<p class="text-xs text-wabi-text-secondary">${accountName}</p>` : `<p class="text-xs text-wabi-text-secondary">${formatDate(record.date, 'short')}</p>`}
@@ -582,14 +674,6 @@ export class RecordsListManager {
             return dateHeader + recordsHtml;
         }).join('');
 
-        // 分期圖標點擊跳轉
-        listContainer.querySelectorAll('.amort-link-icon').forEach(icon => {
-            icon.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                window.location.hash = '#amortizations';
-            });
-        });
     }
 
     updateSummary(records) {
@@ -626,8 +710,9 @@ export class RecordsListManager {
         const recordsForSummary = normalRecords.concat(transferRecords.filter(r => !excludedTransferIds.has(r.id)));
         
         const summary = recordsForSummary.reduce((acc, r) => {
-            if (r.type === 'income') acc.income += r.amount;
-            else acc.expense += r.amount;
+            const rate = r.exchangeRate ?? 1;
+            if (r.type === 'income') acc.income += r.amount * rate;
+            else acc.expense += r.amount * rate;
             return acc;
         }, { income: 0, expense: 0 });
 
@@ -638,11 +723,12 @@ export class RecordsListManager {
 
     showCategoryFilterModal() {
         const categoryNetTotals = this.records.reduce((acc, record) => {
-            const { category, type, amount } = record;
+            const { category, type, amount, exchangeRate } = record;
+            const rate = exchangeRate ?? 1;
             if (!acc[category]) {
                 acc[category] = 0;
             }
-            acc[category] += (type === 'income' ? amount : -amount);
+            acc[category] += (type === 'income' ? amount * rate : -amount * rate);
             return acc;
         }, {});
 

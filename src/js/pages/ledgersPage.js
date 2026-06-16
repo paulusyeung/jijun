@@ -1,5 +1,5 @@
 // ==================== 帳本管理頁面 ====================
-import { showToast, escapeHTML, escAttr, customConfirm } from '../utils.js';
+import { showToast, escapeHTML, escAttr, customConfirm, CURRENCIES, getCurrencySymbol } from '../utils.js';
 import { FONT_AWESOME_ICONS } from '../fontAwesomeIcons.js';
 import { t } from '../i18n.js';
 
@@ -195,6 +195,14 @@ export class LedgersPage {
                     <input type="hidden" id="ledger-icon-input" value="${escAttr(selectedIcon)}" />
                 </div>
 
+                <!-- Base Currency -->
+                <div class="mb-4">
+                    <label class="text-sm font-medium text-wabi-text-primary block mb-1">${t('ledger:baseCurrency')}</label>
+                    <select id="ledger-base-currency-select" class="w-full px-3 py-2.5 rounded-lg border border-wabi-border bg-wabi-surface text-sm focus:ring-wabi-primary focus:border-wabi-primary outline-none">
+                        ${CURRENCIES.map(c => `<option value="${c.code}">${c.code} (${c.symbol}) - ${t('common:currency.' + c.code)}</option>`).join('')}
+                    </select>
+                </div>
+
                 <!-- Preview -->
                 <div class="mb-6 p-3 bg-wabi-bg rounded-lg">
                     <p class="text-xs text-wabi-text-secondary mb-2">${t('ledger:previewLabel')}</p>
@@ -222,6 +230,10 @@ export class LedgersPage {
         const nameInput = modal.querySelector('#ledger-name-input');
         const colorInput = modal.querySelector('#ledger-color-input');
         const iconInput = modal.querySelector('#ledger-icon-input');
+        const baseCurrencySelect = modal.querySelector('#ledger-base-currency-select');
+        if (isEdit && ledger.baseCurrency) {
+            baseCurrencySelect.value = ledger.baseCurrency;
+        }
         const previewIcon = modal.querySelector('#preview-icon');
         const previewName = modal.querySelector('#preview-name');
         const iconPicker = modal.querySelector('#icon-picker');
@@ -335,12 +347,15 @@ export class LedgersPage {
             const name = nameInput.value.trim();
             if (!name) { showToast(t('ledger:nameRequiredError'), 'error'); return; }
 
+            const baseCurrency = document.getElementById('ledger-base-currency-select').value;
+
             try {
                 if (isEdit) {
                     await this.app.ledgerManager.updateLedger(ledger.id, {
                         name,
                         color: colorInput.value,
                         icon: iconInput.value,
+                        baseCurrency,
                     });
                     showToast(t('ledger:updateSuccess'), 'success');
                 } else {
@@ -348,6 +363,7 @@ export class LedgersPage {
                         name,
                         color: colorInput.value,
                         icon: iconInput.value,
+                        baseCurrency,
                     });
                     showToast(t('ledger:createSuccess', { name }), 'success');
                 }
