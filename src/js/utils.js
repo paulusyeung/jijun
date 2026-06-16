@@ -246,16 +246,10 @@ export function formatCurrency(amount, currency) {
     }
   }
   // Fallback: resolve from active ledger's baseCurrency (accessed via window.app)
-  if (window.app && window.app.dataService) {
-    const ledgerId = window.app.dataService.activeLedgerId;
-    // We'll try to get ledger but it's async - fallback to TWD
+  if (window.app && window.app.dataService && window.app.dataService.activeBaseCurrency) {
+    return formatCurrency(amount, window.app.dataService.activeBaseCurrency);
   }
-  return new Intl.NumberFormat(_resolveLocale(), {
-    style: 'currency',
-    currency: 'TWD',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2
-  }).format(amount).replace('NT$', '$')
+  return formatCurrency(amount, 'TWD')
 }
 
 export function formatOriginalWithBase(amount, currency, exchangeRate, baseCurrency) {

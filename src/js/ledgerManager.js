@@ -67,6 +67,7 @@ export class LedgerManager {
             return;
         }
         this.dataService.setActiveLedger(ledgerId);
+        this.dataService.setActiveBaseCurrency(ledger.baseCurrency);
 
         // 重新載入帳戶清單（因為帳戶歸屬帳本）
         if (this.app.advancedModeEnabled) {

@@ -62,6 +62,8 @@
   "invalidPaymentAmount": "請輸入有效金額",
   "amountExceedsRemaining": "金額不能超過剩餘金額 {{amount}}",
   "paymentSuccessful": "還款成功！",
+  "currency": "幣別",
+  "exchangeRateLabel": "1 {{fromCurrency}} = ",
   "update": "更新",
   "periods": "期"
 }

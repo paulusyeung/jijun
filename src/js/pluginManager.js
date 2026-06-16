@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { showToast } from './utils.js';
+import { showToast, CURRENCIES } from './utils.js';
 import Chart from 'chart.js/auto';
 import { PluginStorage } from './pluginStorage.js';
 
@@ -50,6 +50,8 @@ function createContext(channelId) {
     appName: 'Easy Accounting',
     version: '',
     activeLedgerId: () => call(channelId, 'meta', 'activeLedgerId', []),
+    getBaseCurrency: () => call(channelId, 'meta', 'getBaseCurrency', []),
+    getCurrencies: () => [...CURRENCIES],
     lib: {},
     storage: {
       getItem:   (k) => call(channelId, 'storage', 'getItem', [k]),
@@ -247,6 +249,11 @@ export class PluginManager {
       appName: 'Easy Accounting',
       version: __APP_VERSION__,
       activeLedgerId: () => this.dataService.activeLedgerId,
+      getBaseCurrency: async () => {
+          const ledger = await this.dataService.getLedger(this.dataService.activeLedgerId);
+          return ledger?.baseCurrency || 'TWD';
+      },
+      getCurrencies: () => [...CURRENCIES],
       lib: { Chart: Chart },
       storage,
       data: dataApi,
@@ -631,6 +638,10 @@ export class PluginManager {
                 }
                 case 'meta': {
                     if (method === 'activeLedgerId') result = this.dataService.activeLedgerId;
+                    else if (method === 'getBaseCurrency') {
+                        const ledger = await this.dataService.getLedger(this.dataService.activeLedgerId);
+                        result = ledger?.baseCurrency || 'TWD';
+                    }
                     else throw new Error(`Unknown meta method: ${method}`);
                     break;
                 }

@@ -126,33 +126,6 @@ export class RecordsListManager {
         }
     }
 
-    _renderCurrencyModeBtn() {
-        const toggle = this.container.querySelector('#records-currency-toggle');
-        const label = this.container.querySelector('#records-currency-mode-label');
-        if (toggle && label) {
-            label.textContent = t(DISPLAY_MODE_KEYS[this.displayModeIndex]);
-            toggle.classList.remove('bg-wabi-primary/10', 'border-wabi-primary');
-            if (this.displayModeIndex !== 0) {
-                toggle.classList.add('bg-wabi-primary/10', 'border-wabi-primary');
-            }
-        }
-    }
-
-    _formatRecordAmount(record) {
-        const mode = DISPLAY_MODES[this.displayModeIndex];
-        const converted = this._getEffectiveAmount(record);
-        if (mode === 'original') {
-            return formatCurrency(record.amount, record.currency || this.baseCurrency);
-        } else if (mode === 'both') {
-            return formatOriginalWithBase(record.amount, record.currency || this.baseCurrency, record.exchangeRate ?? 1, this.baseCurrency);
-        }
-        return formatCurrency(converted, this.baseCurrency);
-    }
-
-    _getEffectiveAmount(record) {
-        return record.amount * (record.exchangeRate ?? 1);
-    }
-
     setupEventListeners() {
         // Currency display mode toggle
         const currencyToggle = this.container.querySelector('#records-currency-toggle');

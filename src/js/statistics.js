@@ -245,12 +245,14 @@ export class StatisticsManager {
                 }, account.balance);
 
                 const accountBalanceEl = accountBalanceCard.querySelector('#stats-account-balance');
-                accountBalanceEl.textContent = formatCurrency(currentBalance);
+                accountBalanceEl.textContent = formatCurrency(currentBalance, stats.baseCurrency);
                 accountBalanceCard.classList.remove('hidden');
             }
         } else {
             accountBalanceCard.classList.add('hidden');
         }
+
+        this.baseCurrency = stats.baseCurrency;
 
         this.updateSummaryCards(stats);
         this.renderTrendChart(stats.dailyTotals, dateRange);
@@ -314,10 +316,11 @@ export class StatisticsManager {
     }
 
     updateSummaryCards(stats) {
+        const currency = stats.baseCurrency || this.baseCurrency || 'TWD';
         const netBalance = stats.totalIncome - stats.totalExpense;
-        this.container.querySelector('#stats-total-income').textContent = formatCurrency(stats.totalIncome);
-        this.container.querySelector('#stats-total-expense').textContent = formatCurrency(stats.totalExpense);
-        this.container.querySelector('#stats-net-balance').textContent = formatCurrency(netBalance);
+        this.container.querySelector('#stats-total-income').textContent = formatCurrency(stats.totalIncome, currency);
+        this.container.querySelector('#stats-total-expense').textContent = formatCurrency(stats.totalExpense, currency);
+        this.container.querySelector('#stats-net-balance').textContent = formatCurrency(netBalance, currency);
         this.container.querySelector('#stats-net-balance').className = `text-2xl font-bold tracking-tight ${netBalance >= 0 ? 'text-wabi-income' : 'text-wabi-expense'}`;
     }
 
@@ -371,7 +374,7 @@ export class StatisticsManager {
                         grid: { color: '#E2E8F0' },
                         ticks: { 
                             color: '#718096',
-                            callback: value => formatCurrency(value, 0)
+                            callback: value => formatCurrency(value, this.baseCurrency)
                         }
                     }
                 },
@@ -381,7 +384,7 @@ export class StatisticsManager {
                         mode: 'index',
                         intersect: false,
                         callbacks: {
-                            label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y)}`
+                            label: (context) => `${context.dataset.label}: ${formatCurrency(context.parsed.y, this.baseCurrency)}`
                         }
                     }
                 }
@@ -488,7 +491,7 @@ export class StatisticsManager {
                 <canvas id="${chartId.replace('#', '')}"></canvas>
                 <div class="absolute text-center">
                     <p class="text-xs text-wabi-text-secondary">${type === 'expense' ? t('stats:totalExpenseCenter') : t('stats:totalIncomeCenter')}</p>
-                    <p class="text-lg font-bold text-wabi-primary">${formatCurrency(total)}</p>
+                    <p class="text-lg font-bold text-wabi-primary">${formatCurrency(total, this.baseCurrency)}</p>
                 </div>
             </div>
             <div id="${legendId.replace('#', '')}" class="w-full flex-1 space-y-3"></div>
@@ -520,7 +523,7 @@ export class StatisticsManager {
                     <span>${escAttr(d.name || d.name)}</span>
                 </div>
                 <div class="font-medium">
-                    <span>${formatCurrency(d.value)}</span>
+                    <span>${formatCurrency(d.value, this.baseCurrency)}</span>
                     <span class="ml-2 text-xs text-wabi-text-secondary">${((d.value / total) * 100).toFixed(0)}%</span>
                 </div>
             </div>

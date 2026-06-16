@@ -62,6 +62,8 @@
   "invalidPaymentAmount": "Please enter a valid amount",
   "amountExceedsRemaining": "Amount cannot exceed remaining balance {{amount}}",
   "paymentSuccessful": "Payment successful!",
+  "currency": "Currency",
+  "exchangeRateLabel": "1 {{fromCurrency}} = ",
   "update": "Update",
   "periods": "periods"
 }

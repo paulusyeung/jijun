@@ -15,6 +15,9 @@ class DataService {
 
     /** @type {number} 當前啟用的帳本 ID（預設 1 = 預設帳本） */
     this.activeLedgerId = parseInt(localStorage.getItem('activeLedgerId') || '1', 10);
+
+    /** @type {string} 當前帳本的基礎貨幣（同步讀取，供 formatCurrency 使用） */
+    this.activeBaseCurrency = 'TWD';
   }
 
   setHookProvider(fn) {
@@ -353,6 +356,12 @@ class DataService {
           }
         })
         
+        // Resolve active ledger's baseCurrency for synchronous access
+        if (this.db) {
+          const ledger = await this.getLedger(this.activeLedgerId);
+          this.activeBaseCurrency = ledger?.baseCurrency || 'TWD';
+        }
+
         // If it's the first time using the app, try to migrate from localStorage
         await this.migrateFromLocalStorage()
       } else {
@@ -1340,6 +1349,8 @@ class DataService {
               } else {
                   this.setActiveLedger(oldLedgerIdToNewIdMap.values().next().value || 1);
               }
+              const impLedger = await this.getLedger(this.activeLedgerId);
+              this.setActiveBaseCurrency(impLedger?.baseCurrency);
           }
 
           const getMappedLedgerId = (oldLedgerId) => {
@@ -2671,6 +2682,14 @@ class DataService {
   }
 
   /**
+   * 更新 activeBaseCurrency (由上層在擁有 ledger 物件時呼叫)
+   * @param {string} baseCurrency
+   */
+  setActiveBaseCurrency(baseCurrency) {
+    this.activeBaseCurrency = baseCurrency || 'TWD';
+  }
+
+  /**
    * 新增帳本
    * @param {object} ledger { name, icon, color, type }
    * @returns {Promise<number>} 新帳本 ID
@@ -2787,6 +2806,8 @@ class DataService {
       // 若當前帳本被刪除，切回預設帳本
       if (this.activeLedgerId === id) {
         this.setActiveLedger(1);
+        const defaultLedger = await this.getLedger(1);
+        this.setActiveBaseCurrency(defaultLedger?.baseCurrency);
       }
       return true;
     } catch (error) {
