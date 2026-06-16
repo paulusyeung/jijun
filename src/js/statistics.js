@@ -282,7 +282,7 @@ export class StatisticsManager {
             const displayAmount = formatCurrency(r.amount, baseCurrency);
             const isForeignCurrency = r.currency && r.currency !== baseCurrency;
             const currencyBadge = isForeignCurrency
-                ? `<span class="text-[0.6rem] font-bold text-wabi-text-secondary bg-wabi-bg px-1.5 rounded ml-1 whitespace-nowrap">${r.currency}${r.exchangeRate != null ? ` ×${r.exchangeRate}` : ''}</span>`
+                ? `<span class="text-[0.6rem] font-bold text-wabi-text-secondary bg-wabi-bg px-1.5 rounded ml-1 whitespace-nowrap">${formatCurrency(r.amount, r.currency)}</span>`
                 : '';
             const colorStyle = color.startsWith('#') ? `style="background-color: ${color}"` : '';
             const colorClass = !color.startsWith('#') ? color : '';

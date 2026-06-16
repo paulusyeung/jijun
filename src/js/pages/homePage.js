@@ -156,6 +156,7 @@ export class HomePage {
         if (recentRecords.length === 0) {
             container.innerHTML = `<p class="text-center text-wabi-text-secondary py-4">${t('home:noRecords')}</p>`;
         } else {
+            const baseCurrency = stats.baseCurrency || 'TWD';
             container.innerHTML = recentRecords.map(record => {
                 const isIncome = record.type === 'income';
                 let icon, name, color;
@@ -173,18 +174,27 @@ export class HomePage {
 
                 const colorStyle = color.startsWith('#') ? `style="background-color: ${color}"` : '';
                 const colorClass = !color.startsWith('#') ? color : '';
+                const isForeignCurrency = record.currency && record.currency !== baseCurrency;
+                const currencyBadge = isForeignCurrency
+                    ? `<span class="text-[0.6rem] font-bold text-wabi-text-secondary bg-wabi-bg px-1.5 rounded ml-1 whitespace-nowrap">${formatCurrency(record.amount, record.currency)}</span>`
+                    : '';
 
                 return `
-                    <div class="flex items-center gap-4 bg-wabi-surface px-4 py-3 rounded-lg border border-wabi-border">
-                        <div class="flex items-center justify-center rounded-lg ${colorClass} text-white shrink-0 size-12" ${colorStyle}>
-                            <i class="${icon} text-2xl"></i>
+                    <div class="flex items-center gap-4 bg-wabi-surface px-2 min-h-[72px] py-2 justify-between rounded-lg border border-wabi-border">
+                        <div class="flex items-center gap-4 flex-1 min-w-0">
+                            <div class="flex items-center justify-center rounded-lg ${colorClass} text-white shrink-0 size-12" ${colorStyle}>
+                                <i class="${icon} text-2xl"></i>
+                            </div>
+                            <div class="flex flex-col justify-center min-w-0">
+                                <div class="flex items-center gap-2">
+                                    <p class="text-wabi-text-primary text-base font-medium line-clamp-1">${name}</p>
+                                    ${currencyBadge}
+                                </div>
+                                <p class="text-wabi-text-secondary text-sm font-normal line-clamp-2 break-all">${record.description || t('records:noNote')}</p>
+                            </div>
                         </div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-medium text-wabi-text-primary truncate">${name}</p>
-                            <p class="text-sm text-wabi-text-secondary line-clamp-2 break-all">${record.description || formatDate(record.date, 'short')}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-medium ${isIncome ? 'text-wabi-income' : 'text-wabi-expense'}">${isIncome ? '+' : '-'} ${formatCurrency(record.amount, record.currency)}</p>
+                        <div class="shrink-0 text-right">
+                            <p class="font-medium ${isIncome ? 'text-wabi-income' : 'text-wabi-expense'} text-base">${isIncome ? '+' : '-'} ${formatCurrency(record.amount * (record.exchangeRate ?? 1), baseCurrency)}</p>
                             <p class="text-xs text-wabi-text-secondary">${formatDate(record.date, 'short')}</p>
                         </div>
                     </div>

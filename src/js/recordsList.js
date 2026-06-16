@@ -634,7 +634,7 @@ export class RecordsListManager {
                 // Determine record currency display
                 const recordCurrency = record.currency || this.baseCurrency;
                 const isForeignCurrency = record.currency && record.currency !== this.baseCurrency;
-                const currencyBadge = isForeignCurrency ? `<span class="currency-badge text-[0.6rem] font-bold text-wabi-text-secondary bg-wabi-bg px-1.5 rounded ml-1 whitespace-nowrap">${record.currency} ${record.exchangeRate != null ? `×${record.exchangeRate}` : ''}</span>` : '';
+                const currencyBadge = isForeignCurrency ? `<span class="currency-badge text-[0.6rem] font-bold text-wabi-text-secondary bg-wabi-bg px-1.5 rounded ml-1 whitespace-nowrap">${formatCurrency(record.amount, record.currency)}</span>` : '';
 
                 return `
                     <a ${isTransfer ? '' : `href="#add?id=${record.id}"`} class="record-item flex items-center gap-4 bg-wabi-surface px-2 min-h-[72px] py-2 justify-between rounded-lg border border-wabi-border ${isTransfer ? '' : 'hover:border-wabi-primary transition-colors'} ${shouldDim ? 'opacity-60' : ''}">
